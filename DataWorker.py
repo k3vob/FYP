@@ -34,7 +34,7 @@ def sortByIDLifespan(df):
         .sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])
 
 
-def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer, numFeatures):
+def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
     inputs, labels = [], []
     newID = False               # ############## NEEDED?
     for i in range(batchSize):
@@ -43,7 +43,7 @@ def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer, numFeatures):
             inputs.append(sequence)
             labels.append(labelMatrix[IDPointer][TSPointer + (i + 1) * sequenceLength - 1])
         else:
-            pad = np.zeros((1, numFeatures))
+            pad = np.zeros((1, 108))    # #################### ADD TO CONSTANTS
             for _ in range(sequenceLength - len(sequence)):
                 sequence = np.concatenate((pad, sequence))
             inputs.append(sequence)

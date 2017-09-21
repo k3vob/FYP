@@ -45,7 +45,7 @@ with tf.Session() as session:
     session.run(tf.global_variables_initializer())
     IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
     for batchNum in range(10000):
-        batchX, batchY, IDPointer, TSPointer, newID = DataWorker.generateBatch(xMatrix, yMatrix, IDPointer, TSPointer, numFeatures)
+        batchX, batchY, IDPointer, TSPointer, newID = DataWorker.generateBatch(xMatrix, yMatrix, IDPointer, TSPointer)
         # if newID then reset state
         dict = {x: batchX, y: batchY}
         session.run(optimiser, dict)

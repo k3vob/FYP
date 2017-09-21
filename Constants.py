@@ -5,3 +5,4 @@ numEpochs = 500
 numHidden = 100
 learningRate = 0.001
 forgetBias = 1.0
+featureNames = ['derived', 'fundamental', 'technical']
