@@ -1,7 +1,9 @@
 import pandas as pd
 import os
+from Constants import *
 
-wd = os.path.dirname(os.path.realpath(__file__))    # Current dir
+# Current dir
+wd = os.path.dirname(os.path.realpath(__file__))
 default_file = 'train.h5'
 
 
@@ -23,3 +25,25 @@ def writeHDF(df, filename=None):
     if filename.split('.')[-1] != 'h5':
         filename += '.h5'
     df.to_hdf(filename, 'w')
+
+
+def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
+    inputs, labels = [], []
+    newID = False
+    for i in range(batchSize):
+        sequence = inputMatrix[IDPointer][TSPointer + i * sequenceLength:TSPointer + (i + 1) * sequenceLength]
+        if len(sequence) == sequenceLength:
+            inputs.append(sequence)
+            labels.append(labelMatrix[IDPointer][TSPointer + (i + 1) * sequenceLength - 1])
+        else:
+            pad = np.zeros((1, numFeatures))
+            for _ in range(sequenceLength - len(sequence)):
+                sequence = np.concatenate((pad, sequence))
+            inputs.append(sequence)
+            labels.append(yMatrix[IDPointer][-1])
+            IDPointer += 1
+            TSPointer = 0
+            newID = True
+            return inputs, labels, IDPointer, TSPointer, newID
+    TSPointer += batchSize * sequenceLength
+    return inputs, labels, IDPointer, TSPointer, newID

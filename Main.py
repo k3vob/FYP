@@ -2,12 +2,7 @@ import numpy as np
 import tensorflow as tf
 import DataWorker
 # import SQLServer
-
-sequenceLength = 15
-batchSize = 25
-numHidden = 100
-learningRate = 0.01
-forgetBias = 1.0
+from Constants import *
 
 # Shape      = 1,710,756 x 111
 # IDs        = 1424     [0, 6, 7, ... , 2156, 2158]
@@ -26,29 +21,6 @@ timestamps = list(df['timestamp'].unique())
 xMatrix = np.array([df_filled.loc[df_filled['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
 # (1424, ?, 1) = (numIDs, numIDTimestamps, y)
 yMatrix = np.array([df_filled.loc[df_filled['id'] == ID, ['y']].as_matrix() for ID in IDs])
-
-
-def generateBatch(IDPointer, TSPointer):
-    inputs, labels = [], []
-    newID = False
-    for i in range(batchSize):
-        sequence = xMatrix[IDPointer][TSPointer + i * sequenceLength:TSPointer + (i + 1) * sequenceLength]
-        if len(sequence) == sequenceLength:
-            inputs.append(sequence)
-            labels.append(yMatrix[IDPointer][TSPointer + (i + 1) * sequenceLength - 1])
-        else:
-            pad = np.zeros((1, numFeatures))
-            for _ in range(sequenceLength - len(sequence)):
-                sequence = np.concatenate((pad, sequence))
-            inputs.append(sequence)
-            labels.append(yMatrix[IDPointer][-1])
-            IDPointer += 1
-            TSPointer = 0
-            newID = True
-            return inputs, labels, IDPointer, TSPointer, newID
-    TSPointer += batchSize * sequenceLength
-    return inputs, labels, IDPointer, TSPointer, newID
-
 
 x = tf.placeholder(tf.float32, [None, sequenceLength, numFeatures])
 y = tf.placeholder(tf.float32, [None, 1])
@@ -69,7 +41,7 @@ with tf.Session() as session:
     session.run(tf.global_variables_initializer())
     IDPointer, TSPointer = 0, 0
     for batchNum in range(10000):
-        batchX, batchY, IDPointer, TSPointer, newID = generateBatch(IDPointer, TSPointer)
+        batchX, batchY, IDPointer, TSPointer, newID = generateBatch(xMatrix, yMatrix, IDPointer, TSPointer)
         # if newID then reset state
         dict = {x: batchX, y: batchY}
         session.run(optimiser, dict)
