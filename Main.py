@@ -11,8 +11,8 @@ from Constants import *
 # Read entire raw dataset
 df = DataWorker.readHDF()
 
-# Fill NaNs with mean value of feature and sorts in descending ID lifetime
-df_filled = DataWorker.sortByIDLifetime(df.fillna(df.mean()))
+# Fill NaNs with mean value of feature, then sorts by descending ID lifespan
+df = DataWorker.sortByIDLifespan(df.fillna(df.mean()))
 
 cols = list(df)
 featureNames = ['derived', 'fundamental', 'technical']
@@ -22,9 +22,9 @@ IDs = list((df['id'].unique()))                 # sorted by timestamp
 timestamps = list(df['timestamp'].unique())     # sorted by timestamp
 
 # Shape: (1424, ?, 108) = (numIDs, numIDTimestamps, numFeatures)
-xMatrix = np.array([df_filled.loc[df_filled['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
+xMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
 # Shape: (1424, ?, 1) = (numIDs, numIDTimestamps, y)
-yMatrix = np.array([df_filled.loc[df_filled['id'] == ID, ['y']].as_matrix() for ID in IDs])
+yMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
 x = tf.placeholder(tf.float32, [None, sequenceLength, numFeatures])
 y = tf.placeholder(tf.float32, [None, 1])
@@ -45,7 +45,7 @@ with tf.Session() as session:
     session.run(tf.global_variables_initializer())
     IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
     for batchNum in range(10000):
-        batchX, batchY, IDPointer, TSPointer, newID = generateBatch(xMatrix, yMatrix, IDPointer, TSPointer)
+        batchX, batchY, IDPointer, TSPointer, newID = DataWorker.generateBatch(xMatrix, yMatrix, IDPointer, TSPointer, numFeatures)
         # if newID then reset state
         dict = {x: batchX, y: batchY}
         session.run(optimiser, dict)

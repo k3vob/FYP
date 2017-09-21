@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 from Constants import *
 
@@ -27,14 +28,15 @@ def writeHDF(df, filename=None):
     df.to_hdf(filename, 'w')
 
 
-def sortByIDLifetime(df):
+# Sort dataframe by descending ID lifespan, then by ascedning ID, then by ascending timestamp
+def sortByIDLifespan(df):
     return df.assign(freq=df.groupby('id')['id'].transform('count'))\
-        .sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, False, True])
+        .sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])
 
 
-def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
+def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer, numFeatures):
     inputs, labels = [], []
-    newID = False
+    newID = False               # ############## NEEDED?
     for i in range(batchSize):
         sequence = inputMatrix[IDPointer][TSPointer + i * sequenceLength:TSPointer + (i + 1) * sequenceLength]
         if len(sequence) == sequenceLength:
@@ -45,7 +47,7 @@ def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
             for _ in range(sequenceLength - len(sequence)):
                 sequence = np.concatenate((pad, sequence))
             inputs.append(sequence)
-            labels.append(yMatrix[IDPointer][-1])
+            labels.append(labelMatrix[IDPointer][-1])
             IDPointer += 1
             TSPointer = 0
             newID = True
