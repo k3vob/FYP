@@ -7,8 +7,12 @@ from Constants import *
 # Shape:        1,710,756 x 111
 # IDs:          1424     [0, 6, 7, ... , 2156, 2158]
 # Timestamps:   1813     [0, ... , 1812]
-df = DataWorker.readHDF()           # Read entire raw dataset
-df_filled = df.fillna(df.mean())    # Fill NaNs with mean value of feature
+
+# Read entire raw dataset
+df = DataWorker.readHDF()
+
+# Fill NaNs with mean value of feature and sorts in descending ID lifetime
+df_filled = DataWorker.sortByIDLifetime(df.fillna(df.mean()))
 
 cols = list(df)
 featureNames = ['derived', 'fundamental', 'technical']

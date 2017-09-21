@@ -27,6 +27,11 @@ def writeHDF(df, filename=None):
     df.to_hdf(filename, 'w')
 
 
+def sortByIDLifetime(df):
+    return df.assign(freq=df.groupby('id')['id'].transform('count'))\
+        .sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, False, True])
+
+
 def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
     inputs, labels = [], []
     newID = False
