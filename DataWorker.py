@@ -6,16 +6,23 @@ import Constants
 # IDs:          1424     [0, 6, 7, ... , 2156, 2158]
 # Timestamps:   1813     [0, ... , 1812]
 
+# 590 span all timestamps
+# 834 dont`
+
 df = pd.read_hdf(Constants.default_file)
 df = df.fillna(df.mean())
-df = df.assign(freq=df.groupby('id')['id'].transform('count')).sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])
+df = df.assign(start=df.groupby('id')['timestamp'].transform('min'),
+               end=df.groupby('id')['timestamp'].transform('max'))\
+               .sort_values(by=['end', 'start', 'id', 'timestamp'])       # SORT BY LAST TIMESTAMP
+# df = df.assign(freq=df.groupby('id')['id'].transform('count'))\
+#               .sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])  # SORT BY LIFESPAN
 
 cols = list(df)
 featureNames = ['derived', 'fundamental', 'technical']
 features = [col for col in cols if col.split('_')[0] in featureNames]
 numFeatures = len(features)
-IDs = list((df['id'].unique()))                 # sorted by timestamp
-timestamps = list(df['timestamp'].unique())     # sorted by timestamp
+IDs = list((df['id'].unique()))                 # Sorted by descending lifespan
+timestamps = list(df['timestamp'].unique())     # Sorted by timestamp
 
 # Shape: (1424, ?, 108) = (numIDs, numIDTimestamps, numFeatures)
 inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
