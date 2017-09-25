@@ -1,50 +1,40 @@
 import pandas as pd
 import numpy as np
-import os
-from Constants import *
+import Constants
 
-# Current dir
-wd = os.path.dirname(os.path.realpath(__file__))
-default_file = 'train.h5'
+# Shape:        1,710,756 x 111 (ID, Timestamp, 108 features, y)
+# IDs:          1424     [0, 6, 7, ... , 2156, 2158]
+# Timestamps:   1813     [0, ... , 1812]
 
+df = pd.read_hdf(Constants.default_file)
+df = df.fillna(df.mean())
+df = df.assign(freq=df.groupby('id')['id'].transform('count')).sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])
 
-# Read .h5 file and return as DataFrame
-def readHDF(filename=None):
-    if not filename:
-        filename = default_file
-    filename = wd + '/Data/' + filename
-    if filename.split('.')[-1] != 'h5':
-        filename += '.h5'
-    return pd.read_hdf(filename)
+cols = list(df)
+featureNames = ['derived', 'fundamental', 'technical']
+features = [col for col in cols if col.split('_')[0] in featureNames]
+numFeatures = len(features)
+IDs = list((df['id'].unique()))                 # sorted by timestamp
+timestamps = list(df['timestamp'].unique())     # sorted by timestamp
 
-
-# Write DataFrame as .h5 file
-def writeHDF(df, filename=None):
-    if not filename:
-        filename = 'df.h5'
-    filename = wd + '/Data/' + filename
-    if filename.split('.')[-1] != 'h5':
-        filename += '.h5'
-    df.to_hdf(filename, 'w')
+# Shape: (1424, ?, 108) = (numIDs, numIDTimestamps, numFeatures)
+inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
+# Shape: (1424, ?, 1) = (numIDs, numIDTimestamps, y)
+labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
 
-# Sort dataframe by descending ID lifespan, then by ascedning ID, then by ascending timestamp
-def sortByIDLifespan(df):
-    return df.assign(freq=df.groupby('id')['id'].transform('count'))\
-        .sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])
-
-
-def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
+def generateBatch(IDPointer, TSPointer):
+    """doctring."""
     inputs, labels = [], []
     newID = False               # ############## NEEDED?
-    for i in range(batchSize):
-        sequence = inputMatrix[IDPointer][TSPointer + i * sequenceLength:TSPointer + (i + 1) * sequenceLength]
-        if len(sequence) == sequenceLength:
+    for i in range(Constants.batchSize):
+        sequence = inputMatrix[IDPointer][TSPointer + i * Constants.sequenceLength:TSPointer + (i + 1) * Constants.sequenceLength]
+        if len(sequence) == Constants.sequenceLength:
             inputs.append(sequence)
-            labels.append(labelMatrix[IDPointer][TSPointer + (i + 1) * sequenceLength - 1])
+            labels.append(labelMatrix[IDPointer][TSPointer + (i + 1) * Constants.sequenceLength - 1])
         else:
-            pad = np.zeros((1, 108))    # #################### ADD TO CONSTANTS
-            for _ in range(sequenceLength - len(sequence)):
+            pad = np.zeros((1, numFeatures))
+            for _ in range(Constants.sequenceLength - len(sequence)):
                 sequence = np.concatenate((pad, sequence))
             inputs.append(sequence)
             labels.append(labelMatrix[IDPointer][-1])
@@ -52,5 +42,5 @@ def generateBatch(inputMatrix, labelMatrix, IDPointer, TSPointer):
             TSPointer = 0
             newID = True
             return inputs, labels, IDPointer, TSPointer, newID
-    TSPointer += batchSize * sequenceLength
+    TSPointer += Constants.batchSize * Constants.sequenceLength
     return inputs, labels, IDPointer, TSPointer, newID

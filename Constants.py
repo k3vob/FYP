@@ -1,3 +1,10 @@
+import os
+
+# Current dir
+wd = os.path.dirname(os.path.realpath(__file__))
+data_dir = wd + '/Data/'
+default_file = data_dir + 'train.h5'
+
 sequenceLength = 15
 batchSize = 25
 # epochSize = num batches in entire dataset
