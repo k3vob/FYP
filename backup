@@ -1,0 +1,35 @@
+# Sort DF by ID lifespan
+df = df.assign(freq=df.groupby('id')['id'].transform('count')).sort_values(by=['freq', 'id', 'timestamp'], ascending=[False, True, True])
+
+# Padded input & output matrices ###TOO SLOW###
+inputMatrix = np.zeros(shape=(numIDs, numTimestamps, numFeatures))
+labelMatrix = np.zeros(shape=(numIDs, numTimestamps, 1))
+for i, ID in enumerate(IDs):
+    print(i)
+    IDarray = df.loc[df['id'] == ID]
+        for j, TS in enumerate(timestamps):
+            if TS in IDarray['timestamp'].values:
+                inputMatrix[i, j] = IDarray.loc[IDarray['timestamp'] == TS, [feature for feature in features]].as_matrix().flatten()
+                labelMatrix[i, j] = IDarray.loc[IDarray['timestamp'] == TS, ['y']]
+
+# Generates bacthes along 1 ID at a time
+def generateBatch(IDPointer, TSPointer):
+    inputs, labels = [], []
+    newID = False               # ############## NEEDED?
+    for i in range(Constants.batchSize):
+        sequence = inputMatrix[IDPointer][TSPointer + i * Constants.sequenceLength:TSPointer + (i + 1) * Constants.sequenceLength]
+        if len(sequence) == Constants.sequenceLength:
+            inputs.append(sequence)
+            labels.append(labelMatrix[IDPointer][TSPointer + (i + 1) * Constants.sequenceLength - 1])
+        else:
+            pad = np.zeros((1, numFeatures))
+            for _ in range(Constants.sequenceLength - len(sequence)):
+                sequence = np.concatenate((pad, sequence))
+            inputs.append(sequence)
+            labels.append(labelMatrix[IDPointer][-1])
+            IDPointer += 1
+            TSPointer = 0
+            newID = True
+            return inputs, labels, IDPointer, TSPointer, newID
+    TSPointer += Constants.batchSize * Constants.sequenceLength
+    return inputs, labels, IDPointer, TSPointer, newID
