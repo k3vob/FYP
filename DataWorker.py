@@ -94,7 +94,7 @@ while not epochComplete:
     a, b, ID, TS, epochComplete = generateBatch(ID, TS)
 
 print(a)
-# print(b)
+print(b)
 
 print(inputMatrix[-4][-1])
 print(inputMatrix[-3][-1])
