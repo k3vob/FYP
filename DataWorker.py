@@ -55,7 +55,7 @@ def generateBatch(IDPointer, TSPointer):
     inputs = np.empty(shape=(batchSize, Constants.sequenceLength, numFeatures))
     labels = np.empty(shape=(batchSize, 1))
     for i, ID_ix in enumerate(range(IDPointer, IDPointer + batchSize)):                     # Iterate over IDs in this batch
-        lastLabel = np.empty(shape=(1,))                                                    # Stores last label if sequence is right-padded
+        lastLabel = np.zeros(shape=(1,))                                                    # Stores last label if sequence is padded
         for j, TS in enumerate(range(TSPointer, TSPointer + Constants.sequenceLength)):     # Iterate over timestamps in thit batch
             if TS in ID_TS_dict[IDs[ID_ix]]:                                                # If this timestamp exist for this ID
                 TS_ix = np.where(ID_TS_dict[IDs[ID_ix]] == TS)                              # Get index of this timestamp for this ID
@@ -87,16 +87,16 @@ def generateBatch(IDPointer, TSPointer):
     return inputs, labels, IDPointer, TSPointer, epochComplete
 
 
-ID = 0
-TS = 0
-epochComplete = False
-while not epochComplete:
-    a, b, ID, TS, epochComplete = generateBatch(ID, TS)
-
-print(a)
-# print(b)
-
-print(inputMatrix[-4][-1])
-print(inputMatrix[-3][-1])
-print(inputMatrix[-2][-1])
-print(inputMatrix[-1][-1])
+# ID = 0
+# TS = 0
+# epochComplete = False
+# while not epochComplete:
+#     a, b, ID, TS, epochComplete = generateBatch(ID, TS)
+#
+# print(a)
+# # print(b)
+#
+# print(inputMatrix[-4][-1])
+# print(inputMatrix[-3][-1])
+# print(inputMatrix[-2][-1])
+# print(inputMatrix[-1][-1])

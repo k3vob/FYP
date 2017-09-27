@@ -21,11 +21,13 @@ optimiser = tf.train.AdamOptimizer(Constants.learningRate).minimize(mse)    # Ba
 with tf.Session() as session:
     session.run(tf.global_variables_initializer())
     IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
-    for batchNum in range(10000):
-        batchX, batchY, IDPointer, TSPointer, newID = DataWorker.generateBatch(IDPointer, TSPointer)
-        # if newID then reset state
+    epochComplete = False
+    batchNum = 0
+    while not epochComplete:
+        batchNum += 1
+        batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
         dict = {x: batchX, y: batchY}
         session.run(optimiser, dict)
-        if (batchNum + 1) % 100 == 0 or batchNum in (0, 10000 - 1):
+        if (batchNum) % 1000 == 0 or epochComplete:
             batchLoss = session.run(mse, dict)
-            print(str(batchNum + 1), ": ", str(batchLoss))
+            print(str(batchNum), ": ", str(batchLoss))
