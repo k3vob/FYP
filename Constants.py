@@ -6,9 +6,9 @@ data_dir = wd + '/Data/'
 default_file = data_dir + 'train.h5'
 
 sequenceLength = 20
-batchSize = 10
+batchSize = 5
 # epochSize = num batches in entire dataset
-numEpochs = 500
+numEpochs = 10
 numHidden = 100
 learningRate = 0.001
 forgetBias = 1.0
