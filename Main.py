@@ -16,20 +16,35 @@ outputs, finalState = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
 prediction = tf.add(tf.matmul(outputs[-1], W), b)                           # Prediction after final time step
 prediction = tf.tanh(prediction)                                            # Activation
 mse = tf.losses.mean_squared_error(predictions=prediction, labels=y)        # Mean loss over entire batch
+accuracy = tf.reduce_mean(1 - tf.abs(y - prediction))                       # Accuracy over entire batch
 optimiser = tf.train.AdamOptimizer(Constants.learningRate).minimize(mse)    # Backpropagation
 
 with tf.Session() as session:
     session.run(tf.global_variables_initializer())
+
+    # #############################################
+    # TRAINING
+    # #############################################
     for epoch in range(Constants.numEpochs):
-        print("EPOCH:", epoch + 1)
+        print("***** EPOCH:", epoch + 1, "*****\n")
         IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
         epochComplete = False
         batchNum = 0
         while not epochComplete:
             batchNum += 1
-            batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+            batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer, isTraining=True)
             dict = {x: batchX, y: batchY}
             session.run(optimiser, dict)
-            if (batchNum) % 1000 == 0 or epochComplete:
+            if batchNum % 1000 == 0 or epochComplete:
                 batchLoss = session.run(mse, dict)
-                print(str(batchNum), ":", str(batchLoss))
+                batchAccuracy = session.run(accuracy, dict)
+                print("Iteration:", batchNum)
+                print(batchLoss)
+                print(str("%.2f" % (batchAccuracy * 100) + "%\n"))
+
+    # #############################################
+    # TESTING
+    # #############################################
+    testX, testY, _, _, _ = DataWorker.generateBatch(0, 0, isTraining=False)
+    testAccuracy = session.run(accuracy, {x: testX, y: testY})
+    print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))

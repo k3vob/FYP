@@ -11,9 +11,6 @@ password = 'Obrien55'
 db = 'TwoSigma'
 connection = None
 
-for i in range(1, 10):
-    print(i)
-
 conn_str = urllib.parse.quote_plus(
     r'Driver=' + driver + ';'
     r'Server=' + server + ';'

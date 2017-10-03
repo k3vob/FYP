@@ -5,11 +5,13 @@ import Constants
 # Shape:        1,710,756 x 111 (ID, Timestamp, 108 features, y)
 # IDs:          1424     [0, 6, 7, ... , 2156, 2158]
 # Timestamps:   1813     [0, ... , 1812]
+# Value Raneg:  Features = [-3.63698e+16, 1.04028e+18]
+#                      Y = [-0.0860941, 0.0934978]
 
 df = pd.read_hdf(Constants.default_file)
 df = df.fillna(df.mean())
 
-# SORT BY LAST TIMESTAMP
+# Sort by first then last timestamp
 df = df.assign(start=df.groupby('id')['timestamp'].transform('min'),
                end=df.groupby('id')['timestamp'].transform('max'))\
                .sort_values(by=['end', 'start', 'timestamp'])
@@ -19,9 +21,12 @@ featureNames = ['derived', 'fundamental', 'technical']
 features = [col for col in cols if col.split('_')[0] in featureNames]
 numFeatures = len(features)
 IDs = list((df['id'].unique()))                 # Sorted by ascending last timestamp
-numIDs = len(IDs)
-timestamps = list(df['timestamp'].unique())     # Sorted
-numTimestamps = len(timestamps)
+TSs = list(df['timestamp'].unique())            # Sorted
+
+# Normalise each feature and y column independently to range of 1 around its mean
+# ##### Why aren't NaNs being normalised to exactly 0?
+for column in features + ['y']:
+    df[column] = (df[column] - df[column].mean()) / (df[column].max() - df[column].min())
 
 ID_TS_dict = {}
 for ID in IDs:
@@ -33,17 +38,27 @@ inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]
 labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
 
-# DO ALL IDs SPAN ONE SINGLE RANGE?
-# BRUTE FORCE ALGORITHM, TO BE CLEANED UP
-def generateBatch(IDPointer, TSPointer):
-    IDsComplete = False
-    batchSize = Constants.batchSize
-    if IDPointer + Constants.batchSize >= len(IDs):     # If number of IDs left is < batchSize
-        batchSize = len(IDs) - IDPointer                # Reduce this batch to how many IDs left
-        IDsComplete = True                              # All IDs have been processed
+# ##### Do all IDs span a  single range?
+# ##### Brute force algo, to be cleaned up
+def generateBatch(IDPointer, TSPointer, isTraining):
+    if isTraining:
+        availableIDs = IDs[:int(len(IDs) * Constants.trainingPercentage)]
+        availableTSs = TSs[:int(len(TSs) * Constants.trainingPercentage)]
+        batchSize = Constants.batchSize
+    else:
+        availableIDs = IDs[int(len(IDs) * Constants.trainingPercentage):]
+        availableTSs = TSs[int(len(TSs) * Constants.trainingPercentage):]
+        IDPointer = int(len(IDs) * Constants.trainingPercentage)
+        TSPointer = int(len(TSs) * Constants.trainingPercentage)
+        batchSize = len(availableIDs)
 
-    firstTSFound = False                                # Find the earliest timestamp in this batch
-    for TS in range(TSPointer, numTimestamps):
+    IDsComplete = False
+    if isTraining and IDPointer + Constants.batchSize >= len(availableIDs):     # If number of IDs left is < batchSize
+        batchSize = len(availableIDs) - IDPointer                               # Reduce this batch to how many IDs left
+        IDsComplete = True                                                      # All IDs have been processed
+
+    firstTSFound = False                            # Find the earliest timestamp in this batch
+    for TS in range(TSPointer, len(availableTSs)):
         for ID_ix in range(IDPointer, IDPointer + batchSize):
             if TS in ID_TS_dict[IDs[ID_ix]]:
                 TSPointer = TS
@@ -85,18 +100,3 @@ def generateBatch(IDPointer, TSPointer):
         epochComplete = True                                # epoch is complete
 
     return inputs, labels, IDPointer, TSPointer, epochComplete
-
-
-# ID = 0
-# TS = 0
-# epochComplete = False
-# while not epochComplete:
-#     a, b, ID, TS, epochComplete = generateBatch(ID, TS)
-#
-# print(a)
-# # print(b)
-#
-# print(inputMatrix[-4][-1])
-# print(inputMatrix[-3][-1])
-# print(inputMatrix[-2][-1])
-# print(inputMatrix[-1][-1])
