@@ -20,11 +20,11 @@ for epoch in range(Constants.numEpochs):
         batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
         lstm.setBatchDict(batchX, batchY)
         batchPredictions, batchLabels, batchLoss, batchAccuracy = lstm.runBatch()
-        if batchNum % 1000 == 0 or epochComplete:
-            print("Iteration:", batchNum)
-            print("Pred:", batchPredictions[-1], "\tLabel:", batchLabels[-1])
-            print("Loss:", batchLoss)
-            print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
+        #if batchNum % 1000 == 0 or epochComplete:
+        print("Iteration:", batchNum)
+        print("Pred:", batchPredictions[-1], "\tLabel:", batchLabels[-1])
+        print("Loss:", batchLoss)
+        print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
 
 # #############################################
 # TESTING

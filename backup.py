@@ -16,7 +16,7 @@ prediction = tf.add(tf.matmul(outputs[-1], W), b)                               
 prediction = tf.tanh(prediction)                                                    # Activation
 mse = tf.losses.mean_squared_error(predictions=prediction, labels=y)                # Mean loss over entire batch
 accuracy = tf.reduce_mean(1 - (tf.abs(y - prediction) / DataWorker.labelRange))     # Accuracy over entire batch
-optimiser = tf.train.AdamOptimizer(Constants.learningRate).minimize(mse)            # Backpropagation
+optimiser = tf.train.GradientDescentOptimizer(Constants.learningRate).minimize(mse)            # Backpropagation
 
 lastPred = prediction[-1][0]
 lastLabel = y[-1][0]
