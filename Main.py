@@ -1,50 +1,37 @@
-import tensorflow as tf
 import DataWorker
 import Constants
-# import SQLServer
+from Model import LSTM
 
-x = tf.placeholder(tf.float32, [None, Constants.sequenceLength, DataWorker.numFeatures])
-y = tf.placeholder(tf.float32, [None, 1])
-xTensors = tf.unstack(x, axis=1)   # [seqLength tensors of shape (batchSize, numFeatures)]
+inputDim = [Constants.sequenceLength, DataWorker.numFeatures]
+outputDim = [1]
 
-W = tf.Variable(tf.random_normal([Constants.numHidden, 1]))   # Weighted matrix
-b = tf.Variable(tf.random_normal([1]))              # Bias
+lstm = LSTM(inputDimensionList=inputDim, outputDimensionList=outputDim)
 
-cell = tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias)
-outputs, finalState = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
-# predictions = [tf.add(tf.matmul(output, W), b) for output in outputs]     # List of predictions after each time step
-prediction = tf.add(tf.matmul(outputs[-1], W), b)                           # Prediction after final time step
-prediction = tf.tanh(prediction)                                            # Activation
-mse = tf.losses.mean_squared_error(predictions=prediction, labels=y)        # Mean loss over entire batch
-accuracy = tf.reduce_mean(1 - tf.abs(y - prediction))                       # Accuracy over entire batch
-optimiser = tf.train.AdamOptimizer(Constants.learningRate).minimize(mse)    # Backpropagation
+# #############################################
+# TRAINING
+# #############################################
+for epoch in range(Constants.numEpochs):
+    print("***** EPOCH:", epoch + 1, "*****\n")
+    IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
+    epochComplete = False
+    batchNum = 0
+    while not epochComplete:
+        batchNum += 1
+        batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+        lstm.setBatchDict(batchX, batchY)
+        batchPredictions, batchLabels, batchLoss, batchAccuracy = lstm.runBatch()
+        if batchNum % 1000 == 0 or epochComplete:
+            print("Iteration:", batchNum)
+            print("Pred:", batchPredictions[-1], "\tLabel:", batchLabels[-1])
+            print("Loss:", batchLoss)
+            print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
 
-with tf.Session() as session:
-    session.run(tf.global_variables_initializer())
+# #############################################
+# TESTING
+# #############################################
+testX, testY = DataWorker.generateTestBatch()
+lstm.setBatchDict(testX, testY)
+_, _, _, testAccuracy = lstm.runBatch()
+print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
 
-    # #############################################
-    # TRAINING
-    # #############################################
-    for epoch in range(Constants.numEpochs):
-        print("***** EPOCH:", epoch + 1, "*****\n")
-        IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
-        epochComplete = False
-        batchNum = 0
-        while not epochComplete:
-            batchNum += 1
-            batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer, isTraining=True)
-            dict = {x: batchX, y: batchY}
-            session.run(optimiser, dict)
-            if batchNum % 1000 == 0 or epochComplete:
-                batchLoss = session.run(mse, dict)
-                batchAccuracy = session.run(accuracy, dict)
-                print("Iteration:", batchNum)
-                print(batchLoss)
-                print(str("%.2f" % (batchAccuracy * 100) + "%\n"))
-
-    # #############################################
-    # TESTING
-    # #############################################
-    testX, testY, _, _, _ = DataWorker.generateBatch(0, 0, isTraining=False)
-    testAccuracy = session.run(accuracy, {x: testX, y: testY})
-    print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
+lstm.kill()

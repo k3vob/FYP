@@ -9,12 +9,13 @@ import Constants
 #                      Y = [-0.0860941, 0.0934978]
 
 df = pd.read_hdf(Constants.default_file)
-df = df.fillna(df.mean())
+df = df.fillna(0)
 
 # Sort by first then last timestamp
-df = df.assign(start=df.groupby('id')['timestamp'].transform('min'),
-               end=df.groupby('id')['timestamp'].transform('max'))\
-               .sort_values(by=['end', 'start', 'timestamp'])
+df = df.assign(
+                start=df.groupby('id')['timestamp'].transform('min'),
+                end=df.groupby('id')['timestamp'].transform('max'))\
+                .sort_values(by=['end', 'start', 'timestamp'])
 
 cols = list(df)
 featureNames = ['derived', 'fundamental', 'technical']
@@ -23,11 +24,12 @@ numFeatures = len(features)
 IDs = list((df['id'].unique()))                 # Sorted by ascending last timestamp
 TSs = list(df['timestamp'].unique())            # Sorted
 
-# Normalise each feature and y column independently to range of 1 around its mean
-# ##### Why aren't NaNs being normalised to exactly 0?
 for column in features + ['y']:
-    df[column] = (df[column] - df[column].mean()) / (df[column].max() - df[column].min())
+    df[column] = (df[column] - df[column].mean()) / df[column].std()
 
+labelRange = df['y'].max() - df['y'].min()
+
+# Dict of { <ID> : <[TSs that ID exists in]> }
 ID_TS_dict = {}
 for ID in IDs:
     ID_TS_dict[ID] = df.loc[df['id'] == ID]['timestamp'].values
@@ -40,7 +42,7 @@ labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs]
 
 # ##### Do all IDs span a  single range?
 # ##### Brute force algo, to be cleaned up
-def generateBatch(IDPointer, TSPointer, isTraining):
+def generateBatch(IDPointer, TSPointer, isTraining=True):
     if isTraining:
         availableIDs = IDs[:int(len(IDs) * Constants.trainingPercentage)]
         availableTSs = TSs[:int(len(TSs) * Constants.trainingPercentage)]
@@ -100,3 +102,8 @@ def generateBatch(IDPointer, TSPointer, isTraining):
         epochComplete = True                                # epoch is complete
 
     return inputs, labels, IDPointer, TSPointer, epochComplete
+
+
+def generateTestBatch():
+    inputs, labels, _, _, _ = generateBatch(0, 0, isTraining=False)
+    return inputs, labels
