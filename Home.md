@@ -6,6 +6,7 @@
     - [Sorting](#sorting)
     - [Normalisation](#pre-processing)
 - [Batching](#batching)
+    - [Sorting](#sorting)
 
 # Data
 
