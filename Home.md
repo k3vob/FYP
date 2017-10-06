@@ -6,7 +6,7 @@
     - [Sorting](#sorting)
     - [Normalisation](#pre-processing)
 - [Batching](#batching)
-    - [Sorting](#sorting-prior-to-batching)
+    - [Sorting Prior to Batching](#sorting-prior-to-batching)
 
 # Data
 
@@ -71,6 +71,8 @@ To facilitate my [batching](#batching) algorithm, I had to re-order the dataset 
 | ... | ... | ... |
 
 ### Normalisation
+
+Due to the large amount of null values in the dataset, I came to the conclusion that normalising to 0 mean would then allow me to fill in all null values with 0. My reasoning behind this was that, firstly the mean, variance, etc. of the data would remain unaffected, and secondly, when feeding the data through the network, all null values now set to 0 would force the internal matrix multiplications of these values also to equate to 0, thus not effecting the output. **(Is this the case???)**
 
 
 
