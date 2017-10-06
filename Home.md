@@ -90,7 +90,7 @@ To combat these still very large values after Z-Score normalisation, I decided t
 * Otherwise, if the opposite is true, I divide it by the absolute value of the feature's min
 
 <p align="center"> 
-<img src="http://mathurl.com/yd4bxhcm.png" alt="Normalise to [-1,1]">
+<img src="http://mathurl.com/y8t35wx2.png" alt="Normalise to [-1,1]">
 </p>
 
 This gives a normalisation where the value of the feature at the greatest distance away from the mean takes the value of 1 if it is positive and -1 if negative. All other values in the feature are then squashed proportionally.
