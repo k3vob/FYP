@@ -2,6 +2,7 @@
 - [Data](#data)
   - [Raw Dataset](#raw-dataset)
   - [Pre-Processing](#pre-processing)
+    - [Dealing With Nulls](#dealing-with-nulls)
     - [Sorting](#sorting)
     - [Normalisation](#pre-processing)
 - [Batching](#batching)
@@ -18,6 +19,7 @@
 * 108 features and 1 label per ID for each timestamp that the ID exists in the portfolio
 * Each row corresponds to the 108 features and single label for an ID at a single timestamp
 * Rows are sorted by ascending timestamp and then by ascending ID
+* There are plenty of null values in the dataset
 
 | id | timestamp | derived_0 | ... | derived_4 | fundamental_0 | ... | fundamental_63 | technical_0 | ... | technical_3 | technical_5 | ... | technical_44 | y |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -34,6 +36,12 @@
 
 
 ## Pre-Processing
+
+### Dealing With Nulls
+
+Initially, to facilitate creating the most simple Neural Network possible, I decided to simply fill in all null values with the mean value of its column, thus preventing the program from attempting to make calculations with nulls and crashing execution.
+
+This filling of nulls with the mean soon changed to filling them with the value of 0 for reasons outlines when [normalising the data](#normalisation).
 
 ### Sorting
 
@@ -62,6 +70,8 @@ The dataset is re-ordered by grouping by ID and then ordering them by ID exit, I
 | ... | ... | ... |
 
 ### Normalisation
+
+
 
 # Batching
 
