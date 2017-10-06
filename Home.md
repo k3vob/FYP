@@ -6,7 +6,7 @@
     - [Sorting](#sorting)
     - [Normalisation](#pre-processing)
 - [Batching](#batching)
-    - [Sorting](#sorting)
+    - [Sorting](#sorting-prior-to-batching)
 
 # Data
 
@@ -76,4 +76,4 @@ To facilitate my [batching](#batching) algorithm, I had to re-order the dataset 
 
 # Batching
 
-## Sorting
+## Sorting Prior to Batching
