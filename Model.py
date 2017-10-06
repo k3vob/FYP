@@ -65,7 +65,7 @@ class LSTM():
     #
     # def optimise(self):
     #     """docstring."""
-    #     self.execute(tf.train.AdamOptimizer(self.learningRate).minimize(self.batchLoss))
+    #     self.execute(tf.train.AdamOptimizeself.tf_session = Noner(self.learningRate).minimize(self.batchLoss))
     #
     # def processBatch(self):
     #     """docstring."""
@@ -78,10 +78,10 @@ class LSTM():
     def runBatch(self):
         """docstring."""
         self.batchOutputs, self.batchFinalState = tf.nn.static_rnn(self.cell, self.batchInputTensors, dtype=tf.float32)
-        pred = tf.tanh(tf.add(tf.matmul(self.batchOutputs[-1], self.weightedMatrix), self.biasMatrix))
+        pred = tf.nn.relu(tf.add(tf.matmul(self.batchOutputs[-1], self.weightedMatrix), self.biasMatrix))
         mse = tf.losses.mean_squared_error(predictions=pred, labels=self.batchLabels)
-        #optimiser = tf.train.GradientDescentOptimizer(self.learningRate).minimize(mse)
-        optimiser = tf.train.AdamOptimizer(self.learningRate).minimize(mse)
+        optimiser = tf.train.GradientDescentOptimizer(self.learningRate).minimize(mse)
+        # optimiser = tf.train.AdamOptimizer(self.learningRate).minimize(mse)
 
         if not self.initialised:
             self.session.run(tf.global_variables_initializer())

@@ -11,12 +11,12 @@ b = tf.Variable(tf.random_normal([1]))                          # Bias
 
 cell = tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias)
 outputs, finalState = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
-# predictions = [tf.add(tf.matmul(output, W), b) for output in outputs]             # List of predictions after each time step
-prediction = tf.add(tf.matmul(outputs[-1], W), b)                                   # Prediction after final time step
-prediction = tf.tanh(prediction)                                                    # Activation
-mse = tf.losses.mean_squared_error(predictions=prediction, labels=y)                # Mean loss over entire batch
-accuracy = tf.reduce_mean(1 - (tf.abs(y - prediction) / DataWorker.labelRange))     # Accuracy over entire batch
-optimiser = tf.train.GradientDescentOptimizer(Constants.learningRate).minimize(mse)            # Backpropagation
+# predictions = [tf.add(tf.matmul(output, W), b) for output in outputs]                 # List of predictions after each time step
+prediction = tf.add(tf.matmul(outputs[-1], W), b)                                       # Prediction after final time step
+prediction = tf.nn.relu(prediction)                                                     # Activation
+mse = tf.losses.mean_squared_error(predictions=prediction, labels=y)                    # Mean loss over entire batch
+accuracy = tf.reduce_mean(1 - (tf.abs(y - prediction)))                                 # Accuracy over entire batch
+optimiser = tf.train.GradientDescentOptimizer(Constants.learningRate).minimize(mse)     # Backpropagation
 
 lastPred = prediction[-1][0]
 lastLabel = y[-1][0]
