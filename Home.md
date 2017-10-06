@@ -40,7 +40,7 @@
 
 ### Dealing With Nulls
 
-Initially, to facilitate creating the most simple Neural Network possible, I decided to simply fill in all null values with the mean value of its column, thus preventing the program from attempting to make calculations with nulls and crashing execution.
+Initially, to facilitate creating the most simple Neural Network possible, I decided to simply fill in all null values with the mean value of its column, thus preventing the network from attempting to make calculations with nulls and crashing execution.
 
 This filling of nulls with the mean soon changed to filling them with the value of 0 for reasons outlined when it came to [normalising the data](#normalisation).
 
