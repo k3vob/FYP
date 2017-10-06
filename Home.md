@@ -41,11 +41,11 @@
 
 Initially, to facilitate creating the most simple Neural Network possible, I decided to simply fill in all null values with the mean value of its column, thus preventing the program from attempting to make calculations with nulls and crashing execution.
 
-This filling of nulls with the mean soon changed to filling them with the value of 0 for reasons outlines when [normalising the data](#normalisation).
+This filling of nulls with the mean soon changed to filling them with the value of 0 for reasons outlined when it came to [normalising the data](#normalisation).
 
 ### Sorting
 
-The dataset is re-ordered by grouping by ID and then ordering them by ID exit, ID entry, timestamp for [batching](#sorting) reasons, giving the following structure:
+To facilitate my [batching](#batching) algorithm, I had to re-order the dataset by grouping by ID and then ordering them by ID exit, ID entry, timestamp giving the following structure:
 
 | id | timestamp | ... |
 |----|-----------|-----|
