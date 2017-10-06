@@ -78,8 +78,9 @@ Due to the large amount of null values in the dataset, I came to the conclusion 
 
 In order to achieve this normalisation to 0 mean, my first choice was to use a Z-Score normalisation:
 
-![Z-Score Formula](http://mathurl.com/y9pw597o.png)
-
+<p align="center"> 
+<img src="http://mathurl.com/y9pw597o.png" alt="Z-Score Formula">
+</p>
 
 Z-Score Normalisation produces 0 mean I desired, while also aligning the 1st standard deviation to the range [-1, 1]. However, I quickly realised that, due to some values in the dataset being so large (max value is 1e+18) and a great distance away from the 1st standard deviation, these values would then still take a substantial value when normalised with Z-Score.
 
@@ -88,7 +89,9 @@ To combat these still very large values after Z-Score normalisation, I decided t
 * If the absolute value of the feature's maximum value is greater than that of the feature's minimum value, I would then divide each value the absolute value of feature's max
 * Otherwise, if the opposite is true, I divide it by the absolute value of the feature's min
 
-
+<p align="center"> 
+<img src="http://mathurl.com/yd4bxhcm.png" alt="Normalise to [-1,1]">
+</p>
 
 This gives a normalisation where the value of the feature at the greatest distance away from the mean takes the value of 1 if it is positive and -1 if negative. All other values in the feature are then squashed proportionally.
 
