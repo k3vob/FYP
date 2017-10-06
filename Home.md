@@ -89,7 +89,7 @@ The overall result of this normalisation is a 0 mean and all values within a dis
 
 **Label Normalisation**
 
-All label values in the 'y' column of the dataset are originally within the range [-0.01, +0.01]. These will always need to be normalised to whatever [activation function](#) is being used within the network.
+All label values in the 'y' column of the dataset are originally within the range [-0.01, +0.01]. These will always need to be normalised to the output range of whatever [activation function](#) is being used within the network.
 
 I originally chose to use the [ReLU activation function](#) which produces output in the range [0, inf], and so I normalised the labels to the range [0, 1] so that my network would learn to improve its predictions output from the ReLU activations of range [0, inf] to valid predictions in the range [0, 1].
 
