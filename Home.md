@@ -4,7 +4,7 @@
   - [Pre-Processing](#pre-processing)
     - [Dealing With Nulls](#dealing-with-nulls)
     - [Sorting](#sorting)
-    - [Normalisation](#pre-processing)
+    - [Normalisation](#normalisation)
 - [Batching](#batching)
     - [Sorting Prior to Batching](#sorting-prior-to-batching)
 
@@ -72,6 +72,8 @@ To facilitate my [batching](#batching) algorithm, I had to re-order the dataset 
 
 ### Normalisation
 
+**Feature Normalisation**
+
 Due to the large amount of null values in the dataset, I came to the conclusion that normalising all features to 0 mean would then allow me to fill in all null values with 0. My reasoning behind this was that, firstly the mean, variance, etc. of the data would remain unaffected, and secondly, when feeding the data through the network, all null values now set to 0 would force the internal matrix multiplications of these values also to equate to 0, thus not effecting the output. **(Is this the case???)**
 
 In order to achieve this normalisation to 0 mean, my first choice was to use a Z-Score normalisation, which produces this 0 mean, while also aligning the 1st standard deviation to the range [-1, 1]. However, I quickly realised that, due to some values in the dataset being so large (max value is 1e+18) and a great distance away from the 1st standard deviation, these values would then still take a substantial value when normalised with Z-Score.
@@ -84,6 +86,12 @@ To combat these still very large values after Z-Score normalisation, I decided t
 This gives a normalisation where the value of the feature at the greatest distance away from the mean takes the value of 1 if it is positive and -1 if negative. All other values in the feature are then squashed proportionally.
 
 The overall result of this normalisation is a 0 mean and all values within a distance of 1 from this mean.
+
+**Label Normalisation**
+
+All label values in the 'y' column of the dataset are originally within the range [-0.01, +0.01]. These will always need to be normalised to whatever [activation function](#) is being used within the network.
+
+I originally chose to use the [ReLU activation function](#) which produces output in the range [0, inf], and so I normalised the labels to the range [0, 1] so that my network would learn to improve its predictions output from the ReLU activations of range [0, inf] to valid predictions in the range [0, 1].
 
 # Batching
 
