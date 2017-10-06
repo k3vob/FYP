@@ -1,6 +1,4 @@
-# Data
-
-## Raw Dataset
+# Raw Dataset
 
 * 1,710,756 rows x 111 columns
 * Financial portfolio of 1424 financial instrument IDs and 1813 timestamps
@@ -16,4 +14,4 @@
 * Each row corresponds to the 108 features and single label for an ID at a single timestamp
 * Rows sorted by ascending timestamp and then by ascending ID
 
-## Pre-Processing
+# Pre-Processing
