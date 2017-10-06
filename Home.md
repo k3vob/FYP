@@ -2,6 +2,8 @@
 - [Data](#data)
   - [Raw Dataset](#raw-dataset)
   - [Pre-Processing](#pre-processing)
+    - [Sorting](#sorting)
+    - [Normalisation](#pre-processing)
 - [Batching](#batching)
 
 # Data
@@ -33,7 +35,7 @@
 
 ## Pre-Processing
 
-## Sorting
+### Sorting
 
 The dataset is re-ordered by grouping by ID and then ordering them by ID exit, ID entry, timestamp for [batching](#sorting) reasons, giving the following structure:
 
@@ -59,7 +61,7 @@ The dataset is re-ordered by grouping by ID and then ordering them by ID exit, I
 | 430 | 5 | ... |
 | ... | ... | ... |
 
-
+### Normalisation
 
 # Batching
 
