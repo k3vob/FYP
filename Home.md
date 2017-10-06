@@ -24,4 +24,10 @@
 
 ## Pre-Processing
 
+## Sorting
+
+The dataset is re-ordered by grouping by ID and then ordering them by ID exit, ID entry, timestamp for [batching](#sorting) reasons.
+
 # Batching
+
+## Sorting
