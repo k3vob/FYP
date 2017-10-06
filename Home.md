@@ -46,7 +46,7 @@ This filling of nulls with the mean soon changed to filling them with the value 
 
 ### Sorting
 
-To facilitate my [batching](#batching) algorithm, I had to re-order the dataset by grouping by ID and then ordering them by ID exit, ID entry, timestamp giving the following structure:
+To facilitate my [batching algorithm](#batching), I had to re-order the dataset by grouping by ID and then ordering them by ID exit, ID entry, timestamp giving the following structure:
 
 | id | timestamp | ... |
 |----|-----------|-----|
