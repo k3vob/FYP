@@ -39,7 +39,7 @@ df['y'] = (df['y'] - df['y'].min()) / (df['y'].max() - df['y'].min())
 
 labelRange = df['y'].max() - df['y'].min()
 
-
+plt.scatter()
 
 # Dict of { <ID> : <[TSs that ID exists in]> }
 ID_TS_dict = {}
