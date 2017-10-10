@@ -86,3 +86,13 @@ with tf.Session() as session:
 #             return inputs, labels, IDPointer, TSPointer, newID
 #     TSPointer += Constants.batchSize * Constants.sequenceLength
 #     return inputs, labels, IDPointer, TSPointer, newID
+
+# plt.scatter(range(df.shape[0]), df['fundamental_3'].values, alpha=0.1)
+# plt.tick_params(
+#     axis='x',
+#     which='both',
+#     bottom='off',
+#     top='off',
+#     labelbottom='off')
+# plt.title('fundamental_3 Normalised')
+# plt.savefig(Constants.data_dir + 'FeaturePlots/' + 'fundamental_3_normalised')

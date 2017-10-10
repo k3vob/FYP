@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import Constants
 import matplotlib.pyplot as plt
+import Constants
 
 # Shape:        1,710,756 x 111 (ID, Timestamp, 108 features, y)
 # IDs:          1424     [0, 6, 7, ... , 2156, 2158]
@@ -37,9 +37,11 @@ for column in features:
 # Normalise labels to [0,1] for ReLU activation
 df['y'] = (df['y'] - df['y'].min()) / (df['y'].max() - df['y'].min())
 
-labelRange = df['y'].max() - df['y'].min()
+counts, bins = np.histogram(df['y'], bins='auto')
+print(len(bins))
+print(sum(counts))
 
-plt.scatter()
+labelRange = df['y'].max() - df['y'].min()
 
 # Dict of { <ID> : <[TSs that ID exists in]> }
 ID_TS_dict = {}
