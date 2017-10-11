@@ -9,9 +9,12 @@ xTensors = tf.unstack(x, axis=1)   # [seqLength tensors of shape (batchSize, num
 W = tf.Variable(tf.random_normal([Constants.numHidden, 1]))     # Weighted matrix
 b = tf.Variable(tf.random_normal([1]))                          # Bias
 
-cell = tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias)
+
+cells = [tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias) for _ in range(Constants.numLayers)]
+cell = tf.contrib.rnn.MultiRNNCell(cells)
+# cell = tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias)
+
 outputs, finalState = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
-# predictions = [tf.add(tf.matmul(output, W), b) for output in outputs]                 # List of predictions after each time step
 predictions = tf.add(tf.matmul(outputs[-1], W), b)                                      # Prediction after final time step
 predictions = tf.minimum(tf.maximum(predictions, 0), 1)                                 # Activation
 mse = tf.losses.mean_squared_error(predictions=predictions, labels=y)                   # Mean loss over entire batch
@@ -41,7 +44,7 @@ with tf.Session() as session:
             batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer, isTraining=True)
             dict = {x: batchX, y: batchY}
             session.run(optimiser, dict)
-            if batchNum % 1000 == 0 or epochComplete:
+            if batchNum % 10 == 0 or epochComplete:
                 batchLoss = session.run(mse, dict)
                 batchAccuracy = session.run(accuracy, dict)
                 print("Iteration:", batchNum)
