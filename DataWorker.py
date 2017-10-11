@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import Constants
 
 # Shape:        1,710,756 x 111 (ID, Timestamp, 108 features, y)
@@ -34,14 +33,9 @@ for column in features:
     else:
         df[column] = df[column] / abs(df[column].min())
 
-# Normalise labels to [0,1] for ReLU activation
+# Normalise labels to [0,1] for ReLU activation, round to n decimal places
 df['y'] = (df['y'] - df['y'].min()) / (df['y'].max() - df['y'].min())
-
-counts, bins = np.histogram(df['y'], bins='auto')
-print(len(bins))
-print(sum(counts))
-
-labelRange = df['y'].max() - df['y'].min()
+df['y'] = df['y'].round(Constants.labelPrecision)
 
 # Dict of { <ID> : <[TSs that ID exists in]> }
 ID_TS_dict = {}
@@ -53,8 +47,7 @@ inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]
 # Shape: (1424, ?, 1) = (numIDs, numIDTimestamps, y)
 labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
-
-# ##### Do all IDs span a  single range?
+# ##### Do all IDs span a single range?
 # ##### Brute force algo, to be cleaned up
 def generateBatch(IDPointer, TSPointer, isTraining=True):
     if isTraining:
