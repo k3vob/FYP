@@ -47,6 +47,7 @@ inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]
 # Shape: (1424, ?, 1) = (numIDs, numIDTimestamps, y)
 labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
+
 # ##### Do all IDs span a single range?
 # ##### Brute force algo, to be cleaned up
 def generateBatch(IDPointer, TSPointer, isTraining=True):
