@@ -12,17 +12,44 @@ df = pd.read_hdf(Constants.default_file)
 df = df.fillna(0)
 
 # Sort by last then first timestamp
-df = df.assign(
-                start=df.groupby('id')['timestamp'].transform('min'),
-                end=df.groupby('id')['timestamp'].transform('max'))\
-                .sort_values(by=['end', 'start', 'timestamp'])
+df = df.assign(start=df.groupby('id')['timestamp'].transform('min'),
+               end=df.groupby('id')['timestamp'].transform('max'))\
+               .sort_values(by=['end', 'start', 'timestamp'])
 
 cols = list(df)
 featureNames = ['derived', 'fundamental', 'technical']
 features = [col for col in cols if col.split('_')[0] in featureNames]
 numFeatures = len(features)
-IDs = list((df['id'].unique()))                 # Sorted by ascending last timestamp
-TSs = list(df['timestamp'].unique())            # Sorted
+IDs = list((df['id'].unique()))
+TSs = list(df['timestamp'].unique())
+
+# Dict of { <ID> : <[TSs that ID exists in]> }
+ID_TS_dict = {}
+sortingDict = {}
+for ID in IDs:
+    ID_TS_dict[ID] = df.loc[df['id'] == ID]['timestamp'].values
+    sortingDict[ID] = df.loc[df['id'] == ID]['timestamp'].values
+
+# Create list of IDs sorted by overlap ratio
+# sortedIDs = []
+# for ID in IDs:
+#     if len(ID_TS_dict[ID]) == len(TSs):
+#         sortedIDs.append(ID)
+#         del sortingDict[ID]
+#         break
+#
+# while len(sortingDict) > 0:
+#     lastID = sortedIDs[-1]
+#     lastTSList = ID_TS_dict[lastID]
+#     bestRatio = [None, -1]
+#     for ID, TSList in sortingDict.items():
+#         numOverlaps = len(set(lastTSList).intersection(set(TSList)))
+#         overlapRatio = numOverlaps / len(lastTSList)
+#         if overlapRatio > bestRatio[1]:
+#             bestRatio = [ID, overlapRatio]
+#     sortedIDs.append(bestRatio[0])
+#     del sortingDict[bestRatio[0]]
+#     print(len(sortingDict))
 
 # Normalise features to mean of 0
 # squash range to max distance of 1 from 0

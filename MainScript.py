@@ -40,16 +40,12 @@ with tf.Session() as session:
             batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
             dict = {x: batchX, y: batchY}
             session.run(optimiser, dict)
-<<<<<<< HEAD
             if batchNum % Constants.printStep == 0 or epochComplete:
-=======
-            if batchNum % 10 == 0 or epochComplete:
->>>>>>> 6b9cd941e2fb3c82916a8bdb37db0d8b8df4d78d
                 batchLoss = session.run(mse, dict)
                 batchAccuracy = session.run(accuracy, dict)
                 print("Iteration:", batchNum)
-                print("Label:", session.run(y[-1][0], dict))
-                print("Pred:", session.run(roundedPredictions[-1][0], dict))
+                print("Label:\t ", session.run(y[-1][0], dict))
+                print("Pred:\t ", session.run(roundedPredictions[-1][0], dict))
                 print("Loss:\t ", batchLoss)
                 print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
 
