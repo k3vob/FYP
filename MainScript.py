@@ -9,10 +9,8 @@ xTensors = tf.unstack(x, axis=1)   # [seqLength tensors of shape (batchSize, num
 W = tf.Variable(tf.random_normal([Constants.numHidden, 1]))     # Weighted matrix
 b = tf.Variable(tf.random_normal([1]))                          # Bias
 
-
 cells = [tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias) for _ in range(Constants.numLayers)]
 cell = tf.contrib.rnn.MultiRNNCell(cells)
-# cell = tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias)
 
 outputs, finalState = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
 predictions = tf.add(tf.matmul(outputs[-1], W), b)                                      # Prediction after final time step

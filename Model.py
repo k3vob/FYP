@@ -1,99 +1,64 @@
 import tensorflow as tf
 import Constants
-import DataWorker       # Remove this dependency
 
 
 class LSTM():
-    """docstring."""
 
     def __init__(self,
-                 inputDimensionList,
-                 outputDimensionList,
+                 inputShape,
+                 outputShape,
                  numLayers=Constants.numLayers,
                  numHidden=Constants.numHidden,
                  learningRate=Constants.learningRate,
-                 forgetBias=Constants.forgetBias
-                 ):
-        """docstring."""
-        self.batchInputs = tf.placeholder(tf.float32, [None] + inputDimensionList)
-        self.batchLabels = tf.placeholder(tf.float32, [None] + outputDimensionList)
-        self.weightedMatrix = tf.Variable(tf.random_normal([numHidden] + outputDimensionList))
-        self.biasMatrix = tf.Variable(tf.random_normal(outputDimensionList))
-        self.cell = tf.contrib.rnn.BasicLSTMCell(numHidden, forget_bias=forgetBias)
-        self.numLayers = numLayers
-        self.numHidden = numHidden
-        self.learningRate = learningRate
+                 forgetBias=Constants.forgetBias):
+        self.inputs = tf.placeholder(tf.float32, [None] + inputShape)
+        self.labels = tf.placeholder(tf.float32, [None] + outputShape)
+        self.inputTensors = tf.unstack(self.inputs, axis=1)
+        self.weights = tf.Variable(tf.random_normal([numHidden] + outputShape))
+        self.bias = tf.Variable(tf.random_normal(outputShape))
+        layers = [tf.contrib.rnn.BasicLSTMCell(numHidden, forget_bias=forgetBias) for _ in range(numLayers)]
+        self.cell = tf.contrib.rnn.MultiRNNCell(layers)
+        self.optimiser = tf.train.GradientDescentOptimizer(learningRate)
         self.forgetBias = forgetBias
-        self.batchDict = {}
-        self.batchInputTensors = None
-        self.batchOutputs = None    # All needed as instance variables?
-        self.batchFinalStates = None
-        self.batchPredictions = None
-        self.batchLoss = None
-        self.batchAccuracy = None
-        self.initialised = False
+        self.batchDict = None
         self.session = tf.Session()
-        # Take in activation, loss and optimiser FUNCTIONS as args
+        self.outputs = None
+        self.finalStates = None
+        self.predictions = None
+        self.loss = None
+        self.accuracy = None
+        self.optimise = None
+        self.__buildGraph()
 
-    def execute(self, command):
-        """docstring."""
-        return self.session.run(command, self.batchDict)
+    def __buildGraph(self):
+        outputs, finalStates = tf.nn.static_rnn(self.cell, self.inputTensors, dtype=tf.float32)
+        predictions = tf.add(tf.matmul(outputs[-1], self.weights), self.bias)
+        self.predictions = tf.minimum(tf.maximum(predictions, 0), 1)
+        self.loss = tf.losses.mean_squared_error(predictions=self.predictions, labels=self.labels)
+        self.accuracy = tf.reduce_mean(1 - tf.abs(self.labels - self.predictions) / 1.0)
+        self.optimise = self.optimiser.minimize(self.loss)
+        self.session.run(tf.global_variables_initializer())
 
-    def setBatchDict(self, inputs, labels):
-        """docstring."""
-        self.batchDict = {self.batchInputs: inputs, self.batchLabels: labels}
-        self.batchInputTensors = tf.unstack(self.batchInputs, axis=1)
+    def __execute(self, operation):
+        return self.session.run(operation, self.batchDict)
 
-    # def predict(self):
-    #     """docstring."""
-    #     self.batchOutputs, self.batchFinalState = tf.nn.static_rnn(self.cell, self.batchInputTensors, dtype=tf.float32)
-    #     if not self.initialised:
-    #         self.session.run(tf.global_variables_initializer())
-    #         self.initialised = True
-    #     self.batchPredictions = self.execute(tf.tanh(tf.add(tf.matmul(self.batchOutputs[-1], self.weightedMatrix), self.biasMatrix)))
-    #     return self.batchPredictions
-    #
-    # def getLoss(self):
-    #     """docstring."""
-    #     self.batchLoss = self.execute(tf.losses.mean_squared_error(predictions=self.batchPredictions, labels=self.batchLabels))
-    #     return self.batchLoss
-    #
-    # def getAccuracy(self):
-    #     """docstring."""
-    #     self.batchAccuracy = self.execute(tf.reduce_mean(1 - (tf.abs(self.batchLabels - self.batchPredictions) / DataWorker.labelRange)))
-    #     return self.batchAccuracy
-    #
-    # def optimise(self):
-    #     """docstring."""
-    #     self.execute(tf.train.AdamOptimizeself.tf_session = Noner(self.learningRate).minimize(self.batchLoss))
-    #
-    # def processBatch(self):
-    #     """docstring."""
-    #     pred = self.predict()
-    #     loss = self.getLoss()
-    #     acc = self.getAccuracy()
-    #     self.optimise()
-    #     return pred, loss, acc
+    def setBatch(self, inputs, labels):
+        self.batchDict = {self.inputs: inputs, self.labels: labels}
 
-    def runBatch(self):
-        """docstring."""
-        self.batchOutputs, self.batchFinalState = tf.nn.static_rnn(self.cell, self.batchInputTensors, dtype=tf.float32)
-        pred = tf.nn.relu(tf.add(tf.matmul(self.batchOutputs[-1], self.weightedMatrix), self.biasMatrix))
-        mse = tf.losses.mean_squared_error(predictions=pred, labels=self.batchLabels)
-        optimiser = tf.train.GradientDescentOptimizer(self.learningRate).minimize(mse)
-        # optimiser = tf.train.AdamOptimizer(self.learningRate).minimize(mse)
+    def batchLabels(self):
+        return self.__execute(self.labels)
 
-        if not self.initialised:
-            self.session.run(tf.global_variables_initializer())
-            self.initialised = True
+    def batchPredictions(self):
+        return self.__execute(self.predictions)
 
-        self.execute(optimiser)
-        self.batchPredictions = self.execute(pred)
-        self.batchLoss = self.execute(tf.losses.mean_squared_error(predictions=self.batchPredictions, labels=self.batchLabels))
-        self.batchAccuracy = self.execute(tf.reduce_mean(1 - (tf.abs(self.batchLabels - self.batchPredictions) / DataWorker.labelRange)))
-        labels = self.execute(self.batchLabels)
-        return self.batchPredictions, labels, self.batchLoss, self.batchAccuracy
+    def batchLoss(self):
+        return self.__execute(self.loss)
+
+    def batchAccuracy(self):
+        return self.__execute(self.accuracy)
+
+    def processBatch(self):
+        self.__execute(self.optimise)
 
     def kill(self):
-        """docstring."""
         self.session.close()

@@ -2,36 +2,37 @@ import DataWorker
 import Constants
 from Model import LSTM
 
-inputDim = [Constants.sequenceLength, DataWorker.numFeatures]
-outputDim = [1]
+inputShape = [Constants.sequenceLength, DataWorker.numFeatures]
+outputShape = [1]
 
-lstm = LSTM(inputDimensionList=inputDim, outputDimensionList=outputDim)
+LSTM = LSTM(inputShape, outputShape)
 
 # #############################################
 # TRAINING
 # #############################################
 for epoch in range(Constants.numEpochs):
     print("***** EPOCH:", epoch + 1, "*****\n")
-    IDPointer, TSPointer = 0, 0         # Pointers to current ID and timestamp
+    IDPointer, TSPointer = 0, 0
     epochComplete = False
     batchNum = 0
     while not epochComplete:
         batchNum += 1
         batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
-        lstm.setBatchDict(batchX, batchY)
-        batchPredictions, batchLabels, batchLoss, batchAccuracy = lstm.runBatch()
-        #if batchNum % 1000 == 0 or epochComplete:
-        print("Iteration:", batchNum)
-        print("Pred:", batchPredictions[-1][0], "\tLabel:", batchLabels[-1][0])
-        print("Loss:", batchLoss)
-        print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
+        LSTM.setBatch(batchX, batchY)
+        LSTM.processBatch()
+        if batchNum % Constants.printStep == 0 or epochComplete:
+            print("Batch:\t\t", batchNum)
+            print("Last Pred:\t", LSTM.batchPredictions()[-1][0])
+            print("Last Label:\t", LSTM.batchLabels()[-1][0])
+            print("Loss:\t\t", LSTM.batchLoss())
+            print("Accuracy:\t", str("%.2f" % (LSTM.batchAccuracy() * 100) + "%\n"))
 
 # #############################################
 # TESTING
 # #############################################
-testX, testY = DataWorker.generateTestBatch()
-lstm.setBatchDict(testX, testY)
-_, _, _, testAccuracy = lstm.runBatch()
+testX, testY, _, _, _ = DataWorker.generateTestBatch()
+LSTM.setBatchDict(testX, testY)
+testAccuracy = LSTM.batchAccuracy()
 print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
 
-lstm.kill()
+LSTM.kill()
