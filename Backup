@@ -42,10 +42,22 @@ plt.tick_params(
     top='off',
     labelbottom='off')
 plt.title('fundamental_3 Normalised')
-plt.savefig(Constants.data_dir + 'FeaturePlots/' + 'fundamental_3_normalised')
+plt.savefig(Constants.dataDir + 'FeaturePlots/' + 'fundamental_3_normalised')
 
 # FD histogram bins
 counts, bins = np.histogram(df['y'], bins='auto')   # 564 bins out of 1,710,756 values
+
+# auto bins -> uses np.hist
+_, bins, _ = plt.hist(df['y'].loc[(df['y'] > 0) & (df['y'] < 1)], bins='auto')
+plt.title("Extremes Excluded - " + str(len(bins)) + " Bins")
+plt.savefig(Constants.dataDir + "Binning/ExtremesExcluded")
+
+# Bayesian blocks
+freqs_bins = astroplt.hist(df['y'], bins='blocks', ax=plt)
+bins = len(freqs_bins[0])
+plt.title("Bayesian Blocks - " + str(bins) + " Bins")
+plt.savefig(Constants.dataDir + "Binning/BayesianBlocks_" + str(bins) + "Bins")
+plt.show()
 
 numBins = 10000
 freqs = []

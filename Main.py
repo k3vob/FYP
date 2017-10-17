@@ -3,7 +3,7 @@ import Constants
 from Model import LSTM
 
 inputShape = [Constants.sequenceLength, DataWorker.numFeatures]
-outputShape = [1]
+outputShape = [Constants.sequenceLength, 1]
 
 LSTM = LSTM(inputShape, outputShape)
 
@@ -17,7 +17,7 @@ for epoch in range(Constants.numEpochs):
     batchNum = 0
     while not epochComplete:
         batchNum += 1
-        batchX, batchY, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+        batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
         LSTM.setBatch(batchX, batchY)
         LSTM.processBatch()
         if batchNum % Constants.printStep == 0 or epochComplete:
@@ -30,7 +30,7 @@ for epoch in range(Constants.numEpochs):
 # #############################################
 # TESTING
 # #############################################
-testX, testY, _, _, _ = DataWorker.generateTestBatch()
+testX, testY, testLengths = DataWorker.generateTestBatch()
 LSTM.setBatchDict(testX, testY)
 testAccuracy = LSTM.batchAccuracy()
 print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))

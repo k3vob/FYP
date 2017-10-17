@@ -8,8 +8,6 @@ import Constants
 
 df = pd.DataFrame(index=DataWorker.IDs, columns=DataWorker.TSs)
 
-# df = pd.DataFrame(index=DataWorker.ID_TS_dict.keys(), columns=DataWorker.TSs)
-
 for i, ID in enumerate(DataWorker.IDs):
     print(i + 1, "/", len(DataWorker.IDs))
     bools = []
@@ -20,8 +18,8 @@ for i, ID in enumerate(DataWorker.IDs):
             bools.append(False)
     df.loc[ID] = bools
 
-colours = mcolors.LinearSegmentedColormap.from_list("n", ['#EF5350', '#4CAF50'])  # [No, Yes]
-image = sb.heatmap(df, cmap=colours, square=True, cbar=False, xticklabels=False, yticklabels=False)
-image.set(xlabel='Timestamps', ylabel="IDs")
-plt.title("Sorted By Overlap Ratio")
-plt.savefig(Constants.data_dir + "BatchingAlgos/SortedByOverlapRatio")
+colours = mcolors.LinearSegmentedColormap.from_list("n", ['#49585B', '#7FE6DA'])  # [No, Yes]
+chart = sb.heatmap(df, cmap=colours, square=True, cbar=False, xticklabels=False, yticklabels=False)
+chart.set(xlabel='Timestamps', ylabel="IDs")
+plt.title("Sorted By _____")
+plt.savefig(Constants.dataDir + "BatchingAlgos/SortedBy_____")

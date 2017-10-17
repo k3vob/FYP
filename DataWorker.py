@@ -8,7 +8,7 @@ import Constants
 # Value Range:  Features = [-3.63698e+16, 1.04028e+18]
 #                      Y = [-0.0860941, 0.0934978]
 
-df = pd.read_hdf(Constants.default_file)
+df = pd.read_hdf(Constants.defaultFile)
 df = df.fillna(0)
 
 # Sort by last then first timestamp
@@ -25,12 +25,12 @@ TSs = list(df['timestamp'].unique())
 
 # Dict of { <ID> : <[TSs that ID exists in]> }
 ID_TS_dict = {}
-sortingDict = {}
+sortingDict = {}            # ##### Only needed for overlap ratio
 for ID in IDs:
     ID_TS_dict[ID] = df.loc[df['id'] == ID]['timestamp'].values
     sortingDict[ID] = df.loc[df['id'] == ID]['timestamp'].values
 
-# Create list of IDs sorted by overlap ratio
+# # Create list of IDs sorted by overlap ratio
 # sortedIDs = []
 # for ID in IDs:
 #     if len(ID_TS_dict[ID]) == len(TSs):
@@ -60,14 +60,11 @@ for column in features:
     else:
         df[column] = df[column] / abs(df[column].min())
 
-# Normalise labels to [0,1] for ReLU activation, round to n decimal places
+# Normalise labels to [0,1] for ReLU activation
 df['y'] = (df['y'] - df['y'].min()) / (df['y'].max() - df['y'].min())
-df['y'] = df['y'].round(Constants.labelPrecision)
 
-# Dict of { <ID> : <[TSs that ID exists in]> }
-ID_TS_dict = {}
-for ID in IDs:
-    ID_TS_dict[ID] = df.loc[df['id'] == ID]['timestamp'].values
+# # Round to n decimal places
+# df['y'] = df['y'].round(Constants.labelPrecision)
 
 # Shape: (1424, ?, 108) = (numIDs, numIDTimestamps, numFeatures)
 inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
@@ -75,7 +72,6 @@ inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]
 labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
 
-# ##### Do all IDs span a single range?
 # ##### Brute force algo, to be cleaned up
 def generateBatch(IDPointer, TSPointer, isTraining=True):
     if isTraining:
@@ -104,21 +100,34 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
         if firstTSFound:
             break
 
+    # ##### IF BREAK, FIND LENGTH BEFORE 2ND SEQUENCE
+    # ##### STORE ALL LABELS (batch, sequenceLength, 1)
+    # ##### STORE LENGTH IN ARRAY
+    # ##### PAD REST UP TO ###25###
+
+    actualSequenceLength = Constants.sequenceLength
+    for ID_ix in range(IDPointer, IDPointer + batchSize):
+        for i, TS in enumerate(range(TSPointer, TSPointer + Constants.sequenceLength - 1)):
+            if TS not in ID_TS_dict[IDs[ID_ix]] and (TS + 1) in ID_TS_dict[IDs[ID_ix]]:
+                if (i + 1) < actualSequenceLength:
+                    actualSequenceLength = (i + 1)
+
     inputs = np.empty(shape=(batchSize, Constants.sequenceLength, numFeatures))
-    labels = np.empty(shape=(batchSize, 1))
+    labels = np.empty(shape=(batchSize, Constants.sequenceLength, 1))
+    lengths = np.empty(shape=(batchSize,))
     for i, ID_ix in enumerate(range(IDPointer, IDPointer + batchSize)):                     # Iterate over IDs in this batch
-        lastLabel = np.zeros(shape=(1,))                                                    # Stores last label if sequence is padded
+        lengthFound = False
         for j, TS in enumerate(range(TSPointer, TSPointer + Constants.sequenceLength)):     # Iterate over timestamps in thit batch
             if TS in ID_TS_dict[IDs[ID_ix]]:                                                # If this timestamp exist for this ID
                 TS_ix = np.where(ID_TS_dict[IDs[ID_ix]] == TS)                              # Get index of this timestamp for this ID
                 inputs[i][j] = inputMatrix[ID_ix][TS_ix]                                    # Store features at this timestamp for this ID
-                lastLabel = labelMatrix[ID_ix][TS_ix]                                       # Set current label as last
-                if j == Constants.sequenceLength - 1:                                       # If last timestamp in sequence
-                    labels[i] = lastLabel                                                   # then store this label
+                labels[i][j] = labelMatrix[ID_ix][TS_ix]
             else:                                                                           # If this timestamp doesn't exist for this ID
                 inputs[i][j] = np.zeros(shape=(108,))                                       # Pad with feature array of 0s
-                if j == Constants.sequenceLength - 1:                                       # Set last timestep as last label to be predicted
-                    labels[i] = lastLabel
+                labels[i][j] = np.zeros(shape=(1,))
+                if not lengthFound:
+                    lengths[i] = (j - 1)
+                    lengthFound = True
 
     TSPointer += Constants.sequenceLength                   # Increment TSPointer for next batch
 
@@ -136,9 +145,9 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
     if IDsComplete and TSsComplete:                         # If all IDs and timestamps have been processed
         epochComplete = True                                # epoch is complete
 
-    return inputs, labels, IDPointer, TSPointer, epochComplete
+    return inputs, labels, lengths, IDPointer, TSPointer, epochComplete
 
 
 def generateTestBatch():
-    inputs, labels, _, _, _ = generateBatch(0, 0, isTraining=False)
-    return inputs, labels
+    inputs, labels, lengths, _, _, _ = generateBatch(0, 0, isTraining=False)
+    return inputs, labels, lengths

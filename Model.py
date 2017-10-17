@@ -14,28 +14,29 @@ class LSTM():
         self.inputs = tf.placeholder(tf.float32, [None] + inputShape)
         self.labels = tf.placeholder(tf.float32, [None] + outputShape)
         self.inputTensors = tf.unstack(self.inputs, axis=1)
-        self.weights = tf.Variable(tf.random_normal([numHidden] + outputShape))
-        self.bias = tf.Variable(tf.random_normal(outputShape))
-        layers = [tf.contrib.rnn.BasicLSTMCell(numHidden, forget_bias=forgetBias) for _ in range(numLayers)]
-        self.cell = tf.contrib.rnn.MultiRNNCell(layers)
+        self.labelTensors = tf.unstack(self.labels, axis=1)
+        self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
+        self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
+        layers = [tf.contrib.rnn.LSTMCell(numHidden, forget_bias=forgetBias, state_is_tuple=True) for _ in range(numLayers)]
+        self.cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
         self.optimiser = tf.train.GradientDescentOptimizer(learningRate)
         self.forgetBias = forgetBias
         self.batchDict = None
-        self.session = tf.Session()
         self.outputs = None
         self.finalStates = None
         self.predictions = None
         self.loss = None
         self.accuracy = None
         self.optimise = None
+        self.session = tf.Session()
         self.__buildGraph()
 
     def __buildGraph(self):
         outputs, finalStates = tf.nn.static_rnn(self.cell, self.inputTensors, dtype=tf.float32)
-        predictions = tf.add(tf.matmul(outputs[-1], self.weights), self.bias)
+        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]
         self.predictions = tf.minimum(tf.maximum(predictions, 0), 1)
-        self.loss = tf.losses.mean_squared_error(predictions=self.predictions, labels=self.labels)
-        self.accuracy = tf.reduce_mean(1 - tf.abs(self.labels - self.predictions) / 1.0)
+        self.loss = tf.losses.mean_squared_error(predictions=self.predictions, labels=self.labelTensors)
+        self.accuracy = tf.reduce_mean(1 - tf.abs(self.labelTensors - self.predictions) / 1.0)
         self.optimise = self.optimiser.minimize(self.loss)
         self.session.run(tf.global_variables_initializer())
 
