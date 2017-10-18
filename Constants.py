@@ -5,9 +5,8 @@ wd = os.path.dirname(os.path.realpath(__file__))
 dataDir = wd + '/Data/'
 defaultFile = dataDir + 'train.h5'
 
-labelPrecision = 2
 sequenceLength = 25
-batchSize = 10
+batchSize = 20
 numEpochs = 100
 numLayers = 4
 numHidden = 100

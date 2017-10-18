@@ -126,8 +126,10 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
                 inputs[i][j] = np.zeros(shape=(108,))                                       # Pad with feature array of 0s
                 labels[i][j] = np.zeros(shape=(1,))
                 if not lengthFound:
-                    lengths[i] = (j - 1)
+                    lengths[i] = j
                     lengthFound = True
+        if not lengthFound:
+            lengths[i] = Constants.sequenceLength
 
     TSPointer += Constants.sequenceLength                   # Increment TSPointer for next batch
 

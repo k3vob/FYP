@@ -15,12 +15,15 @@ class LSTM():
         self.labels = tf.placeholder(tf.float32, [None] + outputShape)
         self.inputTensors = tf.unstack(self.inputs, axis=1)
         self.labelTensors = tf.unstack(self.labels, axis=1)
+        self.lengths = tf.placeholder(tf.float32, [None])
+        self.masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
+        self.masks = tf.expand_dims(self.masks, axis=2)
+        self.masks = tf.transpose(self.masks, [1, 0, 2])
         self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
         self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
         layers = [tf.contrib.rnn.LSTMCell(numHidden, forget_bias=forgetBias, state_is_tuple=True) for _ in range(numLayers)]
         self.cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
         self.optimiser = tf.train.GradientDescentOptimizer(learningRate)
-        self.forgetBias = forgetBias
         self.batchDict = None
         self.outputs = None
         self.finalStates = None
@@ -32,34 +35,57 @@ class LSTM():
         self.__buildGraph()
 
     def __buildGraph(self):
-        outputs, finalStates = tf.nn.static_rnn(self.cell, self.inputTensors, dtype=tf.float32)
-        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]
-        self.predictions = tf.minimum(tf.maximum(predictions, 0), 1)
-        self.loss = tf.losses.mean_squared_error(predictions=self.predictions, labels=self.labelTensors)
-        self.accuracy = tf.reduce_mean(1 - tf.abs(self.labelTensors - self.predictions) / 1.0)
+        self.outputs, self.finalStates = tf.nn.static_rnn(self.cell, self.inputTensors, dtype=tf.float32)
+        self.predictions = self.__getPredictions(self.outputs)
+        self.loss = self.__getLoss()
+        self.accuracy = self.__getAccuracy()
         self.optimise = self.optimiser.minimize(self.loss)
         self.session.run(tf.global_variables_initializer())
 
-    def __execute(self, operation):
-        return self.session.run(operation, self.batchDict)
+    def __getPredictions(self, outputs):
+        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]
+        activatedPredictions = self.__activate(predictions)
+        return activatedPredictions
 
-    def setBatch(self, inputs, labels):
-        self.batchDict = {self.inputs: inputs, self.labels: labels}
+    def __activate(self, predictions):
+        return tf.minimum(tf.maximum(predictions, 0), 1)
 
-    def batchLabels(self):
-        return self.__execute(self.labels)
+    def __getLoss(self):
+        squaredDifferences = tf.square((self.labelTensors - self.predictions))
+        maskedSquaredDifferences = tf.multiply(squaredDifferences, self.masks)
+        totalDifferencePerSequence = tf.reduce_sum(maskedSquaredDifferences, axis=0)
+        totalDifferencePerSequence = tf.reshape(totalDifferencePerSequence, [-1])
+        averageDifferencePerSequence = tf.divide(totalDifferencePerSequence, tf.maximum(self.lengths, 1))
+        averageDifferenceOverBatch = tf.reduce_mean(averageDifferencePerSequence)
+        return averageDifferenceOverBatch
 
-    def batchPredictions(self):
-        return self.__execute(self.predictions)
+    def __getAccuracy(self):
+        errors = tf.abs(self.labelTensors - self.predictions)
+        maskedErrors = tf.multiply(errors, self.masks)
+        totalErrorPerSequence = tf.reduce_sum(maskedErrors, axis=0)
+        totalErrorPerSequence = tf.reshape(totalErrorPerSequence, [-1])
+        averageErrorPerSequence = tf.divide(totalErrorPerSequence, tf.maximum(self.lengths, 1))
+        averageErrorOverBatch = tf.reduce_mean(averageErrorPerSequence)
+        percentageAccuracy = (1 - averageErrorOverBatch) * 100
+        return percentageAccuracy
 
-    def batchLoss(self):
-        return self.__execute(self.loss)
+    def setBatchDict(self, inputs, labels, lengths):
+        self.batchDict = {self.inputs: inputs, self.labels: labels, self.lengths: lengths}
 
-    def batchAccuracy(self):
-        return self.__execute(self.accuracy)
+    def getBatchLabels(self):
+        return self.session.run(self.labels, self.batchDict)
+
+    def getBatchPredictions(self):
+        return self.session.run(self.predictions, self.batchDict)
+
+    def getBatchLoss(self):
+        return self.session.run(self.loss, self.batchDict)
+
+    def getBatchAccuracy(self):
+        return self.session.run(self.accuracy, self.batchDict)
 
     def processBatch(self):
-        self.__execute(self.optimise)
+        return self.session.run(self.optimise, self.batchDict)
 
     def kill(self):
         self.session.close()

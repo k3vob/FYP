@@ -18,20 +18,20 @@ for epoch in range(Constants.numEpochs):
     while not epochComplete:
         batchNum += 1
         batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
-        LSTM.setBatch(batchX, batchY)
+        LSTM.setBatchDict(batchX, batchY, batchLengths)
         LSTM.processBatch()
         if batchNum % Constants.printStep == 0 or epochComplete:
             print("Batch:\t\t", batchNum)
-            print("Last Pred:\t", LSTM.batchPredictions()[-1][0])
-            print("Last Label:\t", LSTM.batchLabels()[-1][0])
-            print("Loss:\t\t", LSTM.batchLoss())
-            print("Accuracy:\t", str("%.2f" % (LSTM.batchAccuracy() * 100) + "%\n"))
+            #print("Last Pred:\t", LSTM.batchPredictions()[-1][0])
+            #print("Last Label:\t", LSTM.batchLabels()[-1][0])
+            print("Loss:\t\t", LSTM.getBatchLoss())
+            print("Accuracy:\t", str("%.2f" % LSTM.getBatchAccuracy() + "%\n"))
 
 # #############################################
 # TESTING
 # #############################################
 testX, testY, testLengths = DataWorker.generateTestBatch()
-LSTM.setBatchDict(testX, testY)
+LSTM.setBatch(testX, testY)
 testAccuracy = LSTM.batchAccuracy()
 print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
 
