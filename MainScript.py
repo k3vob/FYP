@@ -41,42 +41,52 @@ accuracy = 1 - accuracy
 
 optimiser = tf.train.GradientDescentOptimizer(Constants.learningRate).minimize(loss)     # Backpropagation
 
+lastPredictions = predictions
+lastPredictions = tf.transpose(lastPredictions, [1, 0, 2])[-1]
+lastPredictions = tf.reshape(lastPredictions, [-1])
+lastPredictions = lastPredictions[:tf.cast(lengths[-1], tf.int32)]
+
+lastLabels = y[-1]
+lastLabels = tf.reshape(lastLabels, [-1])
+lastLabels = lastLabels[:tf.cast(lengths[-1], tf.int32)]
+
 with tf.Session() as session:
     session.run(tf.global_variables_initializer())
 
-    # IDPointer, TSPointer = 0, 0
-    # for i in range(1):
-    #     batchSz, batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, IDPointer)
-    #     dict = {batchSize: batchSz, x: batchX, y: batchY, lengths: batchLengths}
-    #     session.run(optimiser, dict)
-    #     print(i + 1)
-    #     print(session.run(loss, dict))
+    IDPointer, TSPointer = 0, 0
+    for i in range(1):
+        batchSz, batchX, batchY, batchLengths, _, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, IDPointer)
+        dict = {batchSize: batchSz, x: batchX, y: batchY, lengths: batchLengths}
+        session.run(optimiser, dict)
+        print(i + 1)
+        print(session.run(lastLabels, dict))
+        print(session.run(lastPredictions, dict))
 
-    # #############################################
-    # TRAINING
-    # #############################################
-    for epoch in range(Constants.numEpochs):
-        print("***** EPOCH:", epoch + 1, "*****\n")
-        IDPointer, TSPointer = 0, 0
-        epochComplete = False
-        batchNum = 0
-        while not epochComplete:
-            batchNum += 1
-            batchSz, batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
-            dict = {batchSize: batchSz, x: batchX, y: batchY, lengths: batchLengths}
-            session.run(optimiser, dict)
-            if batchNum % Constants.printStep == 0 or epochComplete:
-                batchLoss = session.run(loss, dict)
-                batchAccuracy = session.run(accuracy, dict)
-                print("Iteration:", batchNum)
-                # print("Label:\t ", session.run(y[-1][0], dict))
-                # print("Pred:\t ", session.run(predictions[-1][0], dict))
-                print("Loss:\t ", batchLoss)
-                print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
-
-    # #############################################
-    # TESTING
-    # #############################################
-    testSize, testX, testY, testLabels, _, _, _ = DataWorker.generateTestBatch()
-    testAccuracy = session.run(accuracy, {batchSize: testSize, x: testX, y: testY})
-    print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
+    # # #############################################
+    # # TRAINING
+    # # #############################################
+    # for epoch in range(Constants.numEpochs):
+    #     print("***** EPOCH:", epoch + 1, "*****\n")
+    #     IDPointer, TSPointer = 0, 0
+    #     epochComplete = False
+    #     batchNum = 0
+    #     while not epochComplete:
+    #         batchNum += 1
+    #         batchSz, batchX, batchY, batchLengths, _, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+    #         dict = {batchSize: batchSz, x: batchX, y: batchY, lengths: batchLengths}
+    #         session.run(optimiser, dict)
+    #         if batchNum % Constants.printStep == 0 or epochComplete:
+    #             batchLoss = session.run(loss, dict)
+    #             batchAccuracy = session.run(accuracy, dict)
+    #             print("Iteration:", batchNum)
+    #             # print("Label:\t ", session.run(y[-1][0], dict))
+    #             # print("Pred:\t ", session.run(predictions[-1][0], dict))
+    #             print("Loss:\t ", batchLoss)
+    #             print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
+    #
+    # # #############################################
+    # # TESTING
+    # # #############################################
+    # testSize, testX, testY, testLengths, _ = DataWorker.generateTestBatch()
+    # testAccuracy = session.run(accuracy, {batchSize: testSize, x: testX, y: testY})
+    # print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))

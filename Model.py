@@ -32,6 +32,8 @@ class LSTM():
         self.loss = None
         self.accuracy = None
         self.optimise = None
+        self.lastLabels = None
+        self.lastPredictions = None
         self.session = tf.Session()
         self.resetState()
         self.__buildGraph()
@@ -42,6 +44,8 @@ class LSTM():
         self.loss = self.__getLoss()
         self.accuracy = self.__getAccuracy()
         self.optimise = self.optimiser.minimize(self.loss)
+        self.lastLabels = self.__getLastLabels()
+        self.lastPredictions = self.__getLastPredictions()
         self.session.run(tf.global_variables_initializer())
 
     def resetState(self):
@@ -74,6 +78,19 @@ class LSTM():
         percentageAccuracy = (1 - averageErrorOverBatch) * 100
         return percentageAccuracy
 
+    def __getLastLabels(self):
+        lastLabels = tf.identity(self.labels[-1])
+        lastLabels = tf.reshape(lastLabels, [-1])
+        lastLabels = lastLabels[:tf.cast(self.lengths[-1], tf.int32)]
+        return lastLabels
+
+    def __getLastPredictions(self):
+        lastPredictions = tf.identity(self.predictions)
+        lastPredictions = tf.transpose(lastPredictions, [1, 0, 2])[-1]
+        lastPredictions = tf.reshape(lastPredictions, [-1])
+        lastPredictions = lastPredictions[:tf.cast(self.lengths[-1], tf.int32)]
+        return lastPredictions
+
     def setBatchDict(self, batchSize, inputs, labels, lengths):
         self.batchDict = {self.batchSize: batchSize, self.inputs: inputs, self.labels: labels, self.lengths: lengths}
 
@@ -88,6 +105,12 @@ class LSTM():
 
     def getBatchAccuracy(self):
         return self.session.run(self.accuracy, self.batchDict)
+
+    def getLastLabels(self):
+        return self.session.run(self.lastLabels, self.batchDict)
+
+    def getLastPredictions(self):
+        return self.session.run(self.lastPredictions, self.batchDict)
 
     def processBatch(self):
         return self.session.run(self.optimise, self.batchDict)

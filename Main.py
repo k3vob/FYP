@@ -24,19 +24,24 @@ for epoch in range(Constants.numEpochs):
         LSTM.processBatch()
         if batchNum % Constants.printStep == 0 or epochComplete:
             print("Batch:\t\t", batchNum)
-            #print("Last Pred:\t", LSTM.batchPredictions()[-1][0])
-            #print("Last Label:\t", LSTM.batchLabels()[-1][0])
             print("Loss:\t\t", LSTM.getBatchLoss())
             print("Accuracy:\t", str("%.2f" % LSTM.getBatchAccuracy() + "%\n"))
+
+            label = LSTM.getLastLabels()
+            pred = LSTM.getLastPredictions()
+            print("Labels\t\tPredictions")
+            for lab_pred in zip(label, pred):
+                print(lab_pred[0], "\t", lab_pred[1])
+            print("\n")
 
 # #############################################
 # TESTING
 # #############################################
 testSize, testX, testY, testLengths, resetState = DataWorker.generateTestBatch()
-LSTM.setBatch(batchSize, testX, testY, testLengths)
+LSTM.setBatch(testSize, testX, testY, testLengths)
 if resetState:
     LSTM.resetState()
-testAccuracy = LSTM.batchAccuracy()
-print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
+print("Testing Loss:\t\t", LSTM.getBatchLoss())
+print("Testing Accuracy\t:", str("%.2f" % LSTM.getBatchAccuracy() + "%"))
 
 LSTM.kill()
