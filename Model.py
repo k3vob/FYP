@@ -11,6 +11,7 @@ class LSTM():
                  numHidden=Constants.numHidden,
                  learningRate=Constants.learningRate,
                  forgetBias=Constants.forgetBias):
+        self.batchSize = tf.placeholder(tf.int32, [])
         self.inputs = tf.placeholder(tf.float32, [None] + inputShape)
         self.labels = tf.placeholder(tf.float32, [None] + outputShape)
         self.inputTensors = tf.unstack(self.inputs, axis=1)
@@ -21,26 +22,30 @@ class LSTM():
         self.masks = tf.transpose(self.masks, [1, 0, 2])
         self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
         self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
-        layers = [tf.contrib.rnn.LSTMCell(numHidden, forget_bias=forgetBias, state_is_tuple=True) for _ in range(numLayers)]
+        layers = [tf.contrib.rnn.BasicLSTMCell(numHidden, forget_bias=forgetBias, state_is_tuple=True) for _ in range(numLayers)]
         self.cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
         self.optimiser = tf.train.GradientDescentOptimizer(learningRate)
         self.batchDict = None
         self.outputs = None
-        self.finalStates = None
+        self.state = None
         self.predictions = None
         self.loss = None
         self.accuracy = None
         self.optimise = None
         self.session = tf.Session()
+        self.resetState()
         self.__buildGraph()
 
     def __buildGraph(self):
-        self.outputs, self.finalStates = tf.nn.static_rnn(self.cell, self.inputTensors, dtype=tf.float32)
+        self.outputs, self.state = tf.nn.static_rnn(self.cell, self.inputTensors, initial_state=self.state, dtype=tf.float32)
         self.predictions = self.__getPredictions(self.outputs)
         self.loss = self.__getLoss()
         self.accuracy = self.__getAccuracy()
         self.optimise = self.optimiser.minimize(self.loss)
         self.session.run(tf.global_variables_initializer())
+
+    def resetState(self):
+        self.state = self.cell.zero_state(self.batchSize, tf.float32)
 
     def __getPredictions(self, outputs):
         predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]
@@ -69,8 +74,8 @@ class LSTM():
         percentageAccuracy = (1 - averageErrorOverBatch) * 100
         return percentageAccuracy
 
-    def setBatchDict(self, inputs, labels, lengths):
-        self.batchDict = {self.inputs: inputs, self.labels: labels, self.lengths: lengths}
+    def setBatchDict(self, batchSize, inputs, labels, lengths):
+        self.batchDict = {self.batchSize: batchSize, self.inputs: inputs, self.labels: labels, self.lengths: lengths}
 
     def getBatchLabels(self):
         return self.session.run(self.labels, self.batchDict)

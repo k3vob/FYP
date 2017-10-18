@@ -17,8 +17,10 @@ for epoch in range(Constants.numEpochs):
     batchNum = 0
     while not epochComplete:
         batchNum += 1
-        batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
-        LSTM.setBatchDict(batchX, batchY, batchLengths)
+        batchSize, batchX, batchY, batchLengths, resetState, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+        LSTM.setBatchDict(batchSize, batchX, batchY, batchLengths)
+        if resetState:
+            LSTM.resetState()
         LSTM.processBatch()
         if batchNum % Constants.printStep == 0 or epochComplete:
             print("Batch:\t\t", batchNum)
@@ -30,8 +32,10 @@ for epoch in range(Constants.numEpochs):
 # #############################################
 # TESTING
 # #############################################
-testX, testY, testLengths = DataWorker.generateTestBatch()
-LSTM.setBatch(testX, testY)
+testSize, testX, testY, testLengths, resetState = DataWorker.generateTestBatch()
+LSTM.setBatch(batchSize, testX, testY, testLengths)
+if resetState:
+    LSTM.resetState()
 testAccuracy = LSTM.batchAccuracy()
 print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
 

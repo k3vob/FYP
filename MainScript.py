@@ -3,7 +3,6 @@ import DataWorker
 import Constants
 
 batchSize = tf.placeholder(tf.float32, [])
-print(batchSize)
 x = tf.placeholder(tf.float32, [None, Constants.sequenceLength, DataWorker.numFeatures])
 y = tf.placeholder(tf.float32, [None, Constants.sequenceLength, 1])
 xTensors = tf.unstack(x, axis=1)   # [seqLength tensors of shape (batchSize, numFeatures)]
@@ -17,10 +16,11 @@ masks = tf.transpose(masks, [1, 0, 2])  # seqLen, ?, 1
 W = tf.Variable(tf.random_normal([Constants.numHidden, 1]))     # Weighted matrix
 b = tf.Variable(tf.random_normal([1]))                          # Bias
 
-layers = [tf.contrib.rnn.LSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias, state_is_tuple=True) for _ in range(Constants.numLayers)]
+layers = [tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias, state_is_tuple=True) for _ in range(Constants.numLayers)]
 cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
 
-outputs, finalState = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
+
+outputs, state = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
 predictions = [tf.add(tf.matmul(output, W), b) for output in outputs]
 predictions = tf.minimum(tf.maximum(predictions, 0), 1)     # seqLen, ?, 1
 
@@ -44,40 +44,39 @@ optimiser = tf.train.GradientDescentOptimizer(Constants.learningRate).minimize(l
 with tf.Session() as session:
     session.run(tf.global_variables_initializer())
 
-    IDPointer, TSPointer = 0, 0
-    for i in range(1):
-        batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, IDPointer)
-        dict = {x: batchX, y: batchY, lengths: batchLengths}
-        session.run(optimiser, dict)
-        print(i + 1)
-        print(session.run(loss, dict))
-        print(session.run(accuracy, dict), "\n")
+    # IDPointer, TSPointer = 0, 0
+    # for i in range(1):
+    #     batchSz, batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, IDPointer)
+    #     dict = {batchSize: batchSz, x: batchX, y: batchY, lengths: batchLengths}
+    #     session.run(optimiser, dict)
+    #     print(i + 1)
+    #     print(session.run(loss, dict))
 
-    # # #############################################
-    # # TRAINING
-    # # #############################################
-    # for epoch in range(Constants.numEpochs):
-    #     print("***** EPOCH:", epoch + 1, "*****\n")
-    #     IDPointer, TSPointer = 0, 0
-    #     epochComplete = False
-    #     batchNum = 0
-    #     while not epochComplete:
-    #         batchNum += 1
-    #         batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
-    #         dict = {x: batchX, y: batchY, lengths: batchLengths}
-    #         session.run(optimiser, dict)
-    #         if batchNum % Constants.printStep == 0 or epochComplete:
-    #             batchLoss = session.run(loss, dict)
-    #             batchAccuracy = session.run(accuracy, dict)
-    #             print("Iteration:", batchNum)
-    #             # print("Label:\t ", session.run(y[-1][0], dict))
-    #             # print("Pred:\t ", session.run(predictions[-1][0], dict))
-    #             print("Loss:\t ", batchLoss)
-    #             print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
-#
-#     # #############################################
-#     # TESTING
-#     # #############################################
-#     testX, testY, testLabels, _, _, _ = DataWorker.generateTestBatch()
-#     testAccuracy = session.run(accuracy, {x: testX, y: testY})
-#     print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))
+    # #############################################
+    # TRAINING
+    # #############################################
+    for epoch in range(Constants.numEpochs):
+        print("***** EPOCH:", epoch + 1, "*****\n")
+        IDPointer, TSPointer = 0, 0
+        epochComplete = False
+        batchNum = 0
+        while not epochComplete:
+            batchNum += 1
+            batchSz, batchX, batchY, batchLengths, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+            dict = {batchSize: batchSz, x: batchX, y: batchY, lengths: batchLengths}
+            session.run(optimiser, dict)
+            if batchNum % Constants.printStep == 0 or epochComplete:
+                batchLoss = session.run(loss, dict)
+                batchAccuracy = session.run(accuracy, dict)
+                print("Iteration:", batchNum)
+                # print("Label:\t ", session.run(y[-1][0], dict))
+                # print("Pred:\t ", session.run(predictions[-1][0], dict))
+                print("Loss:\t ", batchLoss)
+                print("Accuracy:", str("%.2f" % (batchAccuracy * 100) + "%\n"))
+
+    # #############################################
+    # TESTING
+    # #############################################
+    testSize, testX, testY, testLabels, _, _, _ = DataWorker.generateTestBatch()
+    testAccuracy = session.run(accuracy, {batchSize: testSize, x: testX, y: testY})
+    print("Testing Accuracy:", str("%.2f" % (testAccuracy * 100) + "%"))

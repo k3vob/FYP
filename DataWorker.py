@@ -139,17 +139,19 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
             TSsComplete = False
             break
 
+    resetState = False
     if TSsComplete:                                         # If so, Increment IDPointer for next batch
         IDPointer += batchSize
         TSPointer = 0
+        resetState = True
 
     epochComplete = False
     if IDsComplete and TSsComplete:                         # If all IDs and timestamps have been processed
         epochComplete = True                                # epoch is complete
 
-    return inputs, labels, lengths, IDPointer, TSPointer, epochComplete
+    return batchSize, inputs, labels, lengths, resetState, IDPointer, TSPointer, epochComplete
 
 
 def generateTestBatch():
-    inputs, labels, lengths, _, _, _ = generateBatch(0, 0, isTraining=False)
-    return inputs, labels, lengths
+    batchSize, inputs, labels, lengths, resetState, _, _, _ = generateBatch(0, 0, isTraining=False)
+    return batchSize, inputs, labels, lengths, resetState
