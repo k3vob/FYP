@@ -12,5 +12,6 @@ numLayers = 4
 numHidden = 100
 learningRate = 0.0001
 forgetBias = 1.0
+dropout = 0.2
 trainingPercentage = 0.8
 printStep = 100

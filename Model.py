@@ -22,8 +22,7 @@ class LSTM():
         self.masks = tf.transpose(self.masks, [1, 0, 2])
         self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
         self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
-        layers = [tf.contrib.rnn.BasicLSTMCell(numHidden, forget_bias=forgetBias, state_is_tuple=True) for _ in range(numLayers)]
-        self.cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
+        self.cell = self.__createCell(numHidden, numLayers)
         self.optimiser = tf.train.AdamOptimizer(learningRate)
         self.batchDict = None
         self.outputs = None
@@ -37,6 +36,14 @@ class LSTM():
         self.session = tf.Session()
         self.resetState()
         self.__buildGraph()
+
+    def __createCell(self, numHidden, numLayers):
+        cells = []
+        for _ in range(numLayers):
+            cell = tf.contrib.rnn.BasicLSTMCell(numHidden)
+            cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=1.0 - Constants.dropout)
+            cells.append(cell)
+        return tf.contrib.rnn.MultiRNNCell(cells)
 
     def __buildGraph(self):
         self.outputs, self.state = tf.nn.static_rnn(self.cell, self.inputTensors, initial_state=self.state, dtype=tf.float32)
