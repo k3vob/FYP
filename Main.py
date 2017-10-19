@@ -38,7 +38,7 @@ for epoch in range(Constants.numEpochs):
 # TESTING
 # #############################################
 testSize, testX, testY, testLengths, resetState = DataWorker.generateTestBatch()
-LSTM.setBatch(testSize, testX, testY, testLengths)
+LSTM.setBatchDict(testSize, testX, testY, testLengths)
 if resetState:
     LSTM.resetState()
 print("Testing Loss:\t\t", LSTM.getBatchLoss())
