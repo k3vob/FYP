@@ -24,7 +24,7 @@ class LSTM():
         self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
         layers = [tf.contrib.rnn.BasicLSTMCell(numHidden, forget_bias=forgetBias, state_is_tuple=True) for _ in range(numLayers)]
         self.cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
-        self.optimiser = tf.train.GradientDescentOptimizer(learningRate)
+        self.optimiser = tf.train.AdamOptimizer(learningRate)
         self.batchDict = None
         self.outputs = None
         self.state = None
