@@ -1,0 +1,38 @@
+Wiki:
+- Batching Algo Diagrams
+- Sorting and batching with broken lifespans
+- Binning/discretisation attempts
+- Distribution of labels (Outliers/spikes at extremes)
+- Theory
+    - Neural Networks
+    - Backpropagation
+    - RNNs
+    - Unrolling a Recurrent Neural Network
+    - LSTMs
+    - Resetting the State
+    - TensorFlow
+    - Batching
+        - Training, Validation, and Testing Sets
+- Model
+    - Script then OOP
+    - Initialising the graph
+    - Optimiser
+    - Activation functions
+    - Loss functions
+    - Accuracy calculation
+    - Multi-layer
+    - Passing and resetting state between batches
+    - Masking
+    - Dropout
+- Evaluation
+    - Overfitting the mean
+
+Model:
+- Linear Interpolation
+- Normalisation
+- Stationarity (Signals)
+    - SDG optimizer
+- Dropout Rate?
+- L2 & L1 regularisation / Weight decay
+- Feature extraction (through other networks - CNN)
+- Wavelet Transformations
