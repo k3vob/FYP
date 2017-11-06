@@ -6,7 +6,7 @@ import Constants
 # IDs:          1424     [0, 6, 7, ... , 2156, 2158]
 # Timestamps:   1813     [0, ... , 1812]
 # Value Range:  Features = [-3.63698e+16, 1.04028e+18]
-#                      Y = [-0.0860941, 0.0934978]
+#                      Y = [-0`.0860941, 0.0934978]
 
 df = pd.read_hdf(Constants.defaultFile)
 df = df.fillna(0)
@@ -53,12 +53,12 @@ for ID in IDs:
 
 # Normalise features to mean of 0
 # squash range to max distance of 1 from 0
-for column in features:
-    df[column] = (df[column] - df[column].mean())
-    if abs(df[column].max()) > abs(df[column].min()):
-        df[column] = df[column] / abs(df[column].max())
-    else:
-        df[column] = df[column] / abs(df[column].min())
+# for column in features:
+#     df[column] = (df[column] - df[column].mean())
+#     if abs(df[column].max()) > abs(df[column].min()):
+#         df[column] = df[column] / abs(df[column].max())
+#     else:
+#         df[column] = df[column] / abs(df[column].min())
 
 # Normalise labels to [0,1] for ReLU activation
 df['y'] = (df['y'] - df['y'].min()) / (df['y'].max() - df['y'].min())

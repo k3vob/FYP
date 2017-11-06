@@ -14,15 +14,13 @@ class LSTM():
         self.batchSize = tf.placeholder(tf.int32, [])
         self.inputs = tf.placeholder(tf.float32, [None] + inputShape)
         self.labels = tf.placeholder(tf.float32, [None] + outputShape)
+        self.lengths = tf.placeholder(tf.float32, [None])
         self.inputTensors = tf.unstack(self.inputs, axis=1)
         self.labelTensors = tf.unstack(self.labels, axis=1)
-        self.lengths = tf.placeholder(tf.float32, [None])
-        self.masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
-        self.masks = tf.expand_dims(self.masks, axis=2)
-        self.masks = tf.transpose(self.masks, [1, 0, 2])
         self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
         self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
-        self.cell = self.__createCell(numHidden, numLayers)
+        self.masks = self.__createMasks()
+        self.cell = self.__createStackedCells(numHidden, numLayers)
         self.optimiser = tf.train.AdamOptimizer(learningRate)
         self.batchDict = None
         self.outputs = None
@@ -37,7 +35,7 @@ class LSTM():
         self.resetState()
         self.__buildGraph()
 
-    def __createCell(self, numHidden, numLayers):
+    def __createStackedCells(self, numHidden, numLayers):
         cells = []
         for _ in range(numLayers):
             cell = tf.contrib.rnn.BasicLSTMCell(numHidden)
@@ -57,6 +55,11 @@ class LSTM():
 
     def resetState(self):
         self.state = self.cell.zero_state(self.batchSize, tf.float32)
+
+    def __createMasks(self):
+        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
+        masks = tf.expand_dims(masks, axis=2)
+        return tf.transpose(masks, [1, 0, 2])
 
     def __getPredictions(self, outputs):
         predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]

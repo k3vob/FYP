@@ -19,7 +19,6 @@ b = tf.Variable(tf.random_normal([1]))                          # Bias
 layers = [tf.contrib.rnn.BasicLSTMCell(Constants.numHidden, forget_bias=Constants.forgetBias, state_is_tuple=True) for _ in range(Constants.numLayers)]
 cell = tf.contrib.rnn.MultiRNNCell(layers, state_is_tuple=True)
 
-
 outputs, state = tf.nn.static_rnn(cell, xTensors, dtype=tf.float32)
 predictions = [tf.add(tf.matmul(output, W), b) for output in outputs]
 predictions = tf.minimum(tf.maximum(predictions, 0), 1)     # seqLen, ?, 1

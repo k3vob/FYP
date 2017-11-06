@@ -1,28 +1,29 @@
 Wiki:
+- Correct links between pages
 - Batching Algo Diagrams
-- Sorting and batching with broken lifespans
 - Binning/discretisation attempts
 - Distribution of labels (Outliers/spikes at extremes)
 - Theory
     - Neural Networks
+    - Gradient Descent
     - Backpropagation
     - RNNs
     - Unrolling a Recurrent Neural Network
     - LSTMs
     - Resetting the State
     - TensorFlow
+        - Graph
+        - Session
     - Batching
         - Training, Validation, and Testing Sets
 - Model
-    - Script then OOP
-    - Initialising the graph
+    - Masking
+    - Multi-layer
+    - Passing and resetting state between batches
     - Optimiser
     - Activation functions
     - Loss functions
     - Accuracy calculation
-    - Multi-layer
-    - Passing and resetting state between batches
-    - Masking
     - Dropout
 - Evaluation
     - Overfitting the mean
