@@ -5,72 +5,73 @@ import Constants
 class LSTM():
 
     def __init__(self,
-                 inputShape,
-                 outputShape,
+                 numFeatures,
+                 sequenceLength=Constants.sequenceLength,
                  numLayers=Constants.numLayers,
-                 numHidden=Constants.numHidden,
+                 numPerLayer=Constants.numHidden,
                  learningRate=Constants.learningRate,
-                 forgetBias=Constants.forgetBias):
+                 dropout=Constants.dropoutRate):
+
         self.batchSize = tf.placeholder(tf.int32, [])
-        self.inputs = tf.placeholder(tf.float32, [None] + inputShape)
-        self.labels = tf.placeholder(tf.float32, [None] + outputShape)
+        self.inputs = tf.placeholder(tf.float32, [None, sequenceLength, numFeatures])
+        self.labels = tf.placeholder(tf.float32, [None, sequenceLength, 1])
+        self.inputsFlat = tf.unstack(self.inputs, axis=1)
+        self.labelsFlat = tf.unstack(self.labels, axis=1)
         self.lengths = tf.placeholder(tf.float32, [None])
-        self.inputTensors = tf.unstack(self.inputs, axis=1)
-        self.labelTensors = tf.unstack(self.labels, axis=1)
-        self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
-        self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
-        self.masks = self.__createMasks()
-        self.cell = self.__createStackedCells(numHidden, numLayers)
+        self.masks = self.__createMasks(sequenceLength)
+        self.weights = tf.Variable(tf.random_normal([numPerLayer, 1]))
+        self.bias = tf.Variable(tf.random_normal([1]))
+        self.layers = self.__createStackedLSTM(numPerLayer, numLayers, dropout)
         self.optimiser = tf.train.AdamOptimizer(learningRate)
+        self.state = None
         self.batchDict = None
         self.outputs = None
-        self.state = None
         self.predictions = None
         self.loss = None
         self.accuracy = None
-        self.optimise = None
-        self.lastLabels = None
-        self.lastPredictions = None
+        self.train = None
+        self.lastLabels = None       # last set of sequenceLength number of labels of the batch
+        self.lastPredictions = None  # last set of sequenceLength number of predictions of the batch
         self.session = tf.Session()
-        self.resetState()
         self.__buildGraph()
 
-    def __createStackedCells(self, numHidden, numLayers):
-        cells = []
+    def __createStackedLSTM(self, numPerLayer, numLayers, dropout):
+        layers = []
         for _ in range(numLayers):
-            cell = tf.contrib.rnn.BasicLSTMCell(numHidden)
-            cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=1.0 - Constants.dropout)
-            cells.append(cell)
-        return tf.contrib.rnn.MultiRNNCell(cells)
+            layer = tf.contrib.rnn.BasicLSTMCell(numPerLayer)
+            layer = tf.contrib.rnn.DropoutWrapper(layer, output_keep_prob=(1.0 - dropout))
+            layers.append(layer)
+        return tf.contrib.rnn.MultiRNNCell(layers)
 
     def __buildGraph(self):
-        self.outputs, self.state = tf.nn.static_rnn(self.cell, self.inputTensors, initial_state=self.state, dtype=tf.float32)
-        self.predictions = self.__getPredictions(self.outputs)
+        self.resetState()
+        self.outputs, self.state = tf.nn.static_rnn(self.layers, self.inputsFlat, initial_state=self.state, dtype=tf.float32)
+        self.predictions = self.__getPredictions()
         self.loss = self.__getLoss()
         self.accuracy = self.__getAccuracy()
-        self.optimise = self.optimiser.minimize(self.loss)
+        self.train = self.optimiser.minimize(self.loss)
         self.lastLabels = self.__getLastLabels()
         self.lastPredictions = self.__getLastPredictions()
         self.session.run(tf.global_variables_initializer())
 
     def resetState(self):
-        self.state = self.cell.zero_state(self.batchSize, tf.float32)
+        self.state = self.layers.zero_state(self.batchSize, tf.float32)
 
-    def __createMasks(self):
-        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
-        masks = tf.expand_dims(masks, axis=2)
+    def __createMasks(self, sequenceLength):
+        masks = tf.sequence_mask(self.lengths, sequenceLength, dtype=tf.float32)
+        masks = tf.expand_dims(masks, axis=-1)
         return tf.transpose(masks, [1, 0, 2])
 
-    def __getPredictions(self, outputs):
-        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]
+    def __getPredictions(self):
+        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in self.outputs]
         activatedPredictions = self.__activate(predictions)
         return activatedPredictions
 
     def __activate(self, predictions):
-        return tf.minimum(tf.maximum(predictions, 0), 1)
+        return tf.nn.relu(predictions)
 
     def __getLoss(self):
-        squaredDifferences = tf.square((self.labelTensors - self.predictions))
+        squaredDifferences = tf.square((self.labelsFlat - self.predictions))
         maskedSquaredDifferences = tf.multiply(squaredDifferences, self.masks)
         totalDifferencePerSequence = tf.reduce_sum(maskedSquaredDifferences, axis=0)
         totalDifferencePerSequence = tf.reshape(totalDifferencePerSequence, [-1])
@@ -79,14 +80,7 @@ class LSTM():
         return averageDifferenceOverBatch
 
     def __getAccuracy(self):
-        errors = tf.abs(self.labelTensors - self.predictions)
-        maskedErrors = tf.multiply(errors, self.masks)
-        totalErrorPerSequence = tf.reduce_sum(maskedErrors, axis=0)
-        totalErrorPerSequence = tf.reshape(totalErrorPerSequence, [-1])
-        averageErrorPerSequence = tf.divide(totalErrorPerSequence, tf.maximum(self.lengths, 1))
-        averageErrorOverBatch = tf.reduce_mean(averageErrorPerSequence)
-        percentageAccuracy = (1 - averageErrorOverBatch) * 100
-        return percentageAccuracy
+        pass
 
     def __getLastLabels(self):
         lastLabels = tf.identity(self.labels[-1])
@@ -101,8 +95,17 @@ class LSTM():
         lastPredictions = lastPredictions[:tf.cast(self.lengths[-1], tf.int32)]
         return lastPredictions
 
-    def setBatchDict(self, batchSize, inputs, labels, lengths):
-        self.batchDict = {self.batchSize: batchSize, self.inputs: inputs, self.labels: labels, self.lengths: lengths}
+    def getLastLabels(self):
+        return self.session.run(self.lastLabels, self.batchDict)
+
+    def getLastPredictions(self):
+        return self.session.run(self.lastPredictions, self.batchDict)
+
+    def setBatchDict(self, inputs, labels, lengths):
+        self.batchDict = {self.batchSize: len(inputs),
+                          self.inputs: inputs,
+                          self.labels: labels,
+                          self.lengths: lengths}
 
     def getBatchLabels(self):
         return self.session.run(self.labels, self.batchDict)
@@ -116,14 +119,8 @@ class LSTM():
     def getBatchAccuracy(self):
         return self.session.run(self.accuracy, self.batchDict)
 
-    def getLastLabels(self):
-        return self.session.run(self.lastLabels, self.batchDict)
-
-    def getLastPredictions(self):
-        return self.session.run(self.lastPredictions, self.batchDict)
-
     def processBatch(self):
-        return self.session.run(self.optimise, self.batchDict)
+        return self.session.run(self.train, self.batchDict)
 
     def kill(self):
         self.session.close()

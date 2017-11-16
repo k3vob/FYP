@@ -1,17 +1,128 @@
 import Constants
 import quandl
-import pandas as pd
 import numpy as np
+from datetime import datetime as dt, timedelta
 
-# First Date:   1999-11-18
+# First Date:   1962-01-02 (IBM -> All dates)
 # Num Tickers:  3194
+
+dir = Constants.dataDir + "Quandl/"
 
 quandl.ApiConfig.api_key = '53psox6QtoBdzpgXYs75'
 # quandl.get_table('WIKI/PRICES', ticker='A', date='1999-11-18,1999-11-19,1999-11-22')
+# yearTickers = quandl.get_table('WIKI/PRICES',
+#                                qopts={'columns': ['ticker']},
+#                                date={'gte': str(year) + '-01-01', 'lte': str(year + 1) + '-01-01'},
+#                                paginate=True)['ticker'].unique()
 
-tickers = np.load(Constants.dataDir + "Quandl/tickers.npy")
-cols = np.load(Constants.dataDir + "Quandl/columns.npy")
+endDate = dt.today().date()
+dataFound = False
+while not dataFound:
+    if quandl.get_table('WIKI/PRICES', date=endDate).empty:
+        endDate = endDate - timedelta(days=1)
+    else:
+        dataFound = True
+
+startDate = endDate - timedelta(days=int(365.25 * Constants.years))
+dataFound = False
+while not dataFound:
+    if quandl.get_table('WIKI/PRICES', date=startDate).empty:
+        startDate = startDate - timedelta(days=1)
+    else:
+        dataFound = True
+
+# startTickers = set(quandl.get_table('WIKI/PRICES', date=startDate)['ticker'])
+# endTickers = set(quandl.get_table('WIKI/PRICES', date=endDate)['ticker'])
+# tickers = sorted(list(startTickers.intersection(endTickers)))
+# tickers = sorted(list(set(quandl.get_table('WIKI/PRICES', date=endDate)['ticker'])))
+
+# def getData():
+#     dates = []
+#     date = startDate
+#     while date != endDate:
+#         print(date)
+#         if not quandl.get_table('WIKI/PRICES', date=date).empty:
+#             dates.append(date)
+#         date += timedelta(days=1)
+#     np.save(file=dir + "dates.npy", arr=np.array(dates))
+#
+#     data = []
+#     for i, company in enumerate(tickers):
+#         print(i + 1, "/", len(tickers))
+#         df = quandl.get_table('WIKI/PRICES', ticker=company, date={'gte': startDate, 'lte': endDate}, paginate=True)
+#         # df.set_index('date', inplace=True)
+#         # df.drop(['date'], axis=1, inplace=True)     # CHANGE SLICING IN BATCH ALGO IF INCLUDING DATE
+#         df['date'] = [date.date() for date in df['date']]
+#         df.drop(['ticker', 'volume', 'ex-dividend', 'split_ratio', 'adj_open', 'adj_high', 'adj_low', 'adj_close', 'adj_volume'], axis=1, inplace=True)
+#         data.append(df.as_matrix())
+#     np.save(file=dir + "data.npy", arr=np.array(data))
 
 
-table = quandl.get_table('WIKI/PRICES', ticker=tickers[0])
-print(table)
+# getData()
+
+tickers = np.load(dir + "10YearTickers.npy")
+dates = np.load(dir + "10YearDates.npy")
+data = np.load(dir + "10YearData.npy")    # (numTickers, numDaysForTicker, 5)
+numTickers = len(tickers)
+numDays = len(dates)
+numFeatures = 3
+
+tickers_dates = {}
+for i, ticker in enumerate(tickers):
+    tickerData = data[i]
+    tickers_dates[ticker] = [dayData[0] for dayData in tickerData]
+
+
+def generateBatch(tickerPointer, datePointer, isTraining=True):
+    # divide test/training sets
+    batchSize = min(Constants.batchSize, numTickers - tickerPointer)
+    sequenceLength = min(Constants.sequenceLength, numDays - datePointer)
+
+    for ticker in tickers[tickerPointer : tickerPointer + batchSize]:
+        breakFound = False
+        for i, date in enumerate(dates[datePointer : datePointer + sequenceLength]):
+            if date not in tickers_dates[ticker]:
+                breakFound = True
+                continue
+            if breakFound and date in tickers_dates[ticker]:
+                sequenceLength = min(sequenceLength, i)
+                break
+
+    inputs = []
+    labels = []
+    lengths = []
+    for tickerIndex in range(tickerPointer, tickerPointer + batchSize):
+        inputSequence = []
+        labelSequence = []
+        lengthFound = False
+        for i, dateIndex in enumerate(range(datePointer, datePointer + Constants.sequenceLength)):
+            if i < sequenceLength and dates[dateIndex] in tickers_dates[tickers[tickerIndex]]:
+                tickerDateIndex = tickers_dates[tickers[tickerIndex]].index(dates[dateIndex])
+                inputSequence.append([feature for feature in data[tickerIndex][tickerDateIndex][1:-1]])
+                labelSequence.append([data[tickerIndex][tickerDateIndex][-1]])
+            else:
+                inputSequence.append([0 for _ in range(numFeatures)])
+                labelSequence.append([0])
+                if not lengthFound:
+                    lengths.append(i)
+                    lengthFound = True
+        inputs.append(inputSequence)
+        labels.append(labelSequence)
+        if not lengthFound:
+            lengths.append(sequenceLength)
+
+    datePointer += sequenceLength
+    if datePointer > (numDays - 1):
+        datePointer = None
+        tickerPointer += batchSize
+        if tickerPointer > numTickers - 1:
+            tickerPointer = None
+
+    return inputs, labels, lengths, tickerPointer, datePointer
+
+
+# minVal = None
+# maxVal = None
+# for i in range(data.shape[0]):
+#     minVal = min(minVal, data[i].min()) if minVal else data[i].min()
+#     maxVal = max(maxVal, data[i].max()) if maxVal else data[i].max()
