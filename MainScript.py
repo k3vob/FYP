@@ -10,8 +10,7 @@ xTensors = tf.unstack(x, axis=1)   # [seqLength tensors of shape (batchSize, num
 yTensors = tf.unstack(y, axis=1)   # seqLen, ?, 1
 
 lengths = tf.placeholder(tf.float32, [None])
-masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32)
-                < tf.reshape(lengths, (-1, 1)), tf.float32)
+masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(lengths, (-1, 1)), tf.float32)
 masks = tf.expand_dims(masks, axis=2)   # ?, seqLen -> ?, seqLen, 1
 masks = tf.transpose(masks, [1, 0, 2])  # seqLen, ?, 1
 

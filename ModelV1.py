@@ -58,8 +58,7 @@ class LSTM():
         self.state = self.layers.zero_state(self.batchSize, tf.float32)
 
     def __createMasks(self):
-        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32)
-                        < tf.reshape(self.lengths, [-1, 1]), tf.float32)
+        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
         masks = tf.expand_dims(masks, axis=2)
         return tf.transpose(masks, [1, 0, 2])
 
