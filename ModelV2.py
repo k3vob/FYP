@@ -1,4 +1,5 @@
 import tensorflow as tf
+
 import Constants
 
 
@@ -45,7 +46,8 @@ class LSTM():
 
     def __buildGraph(self):
         self.resetState()
-        self.outputs, self.state = tf.nn.static_rnn(self.layers, self.inputsFlat, initial_state=self.state, dtype=tf.float32)
+        self.outputs, self.state = tf.nn.static_rnn(
+            self.layers, self.inputsFlat, initial_state=self.state, dtype=tf.float32)
         self.predictions = self.__getPredictions()
         self.loss = self.__getLoss()
         self.accuracy = self.__getAccuracy()
@@ -63,7 +65,8 @@ class LSTM():
         return tf.transpose(masks, [1, 0, 2])
 
     def __getPredictions(self):
-        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in self.outputs]
+        predictions = [tf.add(tf.matmul(output, self.weights), self.bias)
+                       for output in self.outputs]
         activatedPredictions = self.__activate(predictions)
         return activatedPredictions
 
@@ -75,7 +78,8 @@ class LSTM():
         maskedSquaredDifferences = tf.multiply(squaredDifferences, self.masks)
         totalDifferencePerSequence = tf.reduce_sum(maskedSquaredDifferences, axis=0)
         totalDifferencePerSequence = tf.reshape(totalDifferencePerSequence, [-1])
-        averageDifferencePerSequence = tf.divide(totalDifferencePerSequence, tf.maximum(self.lengths, 1))
+        averageDifferencePerSequence = tf.divide(
+            totalDifferencePerSequence, tf.maximum(self.lengths, 1))
         averageDifferenceOverBatch = tf.reduce_mean(averageDifferencePerSequence)
         return averageDifferenceOverBatch
 

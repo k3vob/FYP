@@ -1,7 +1,10 @@
-import Constants
-import quandl
+from datetime import datetime as dt
+from datetime import timedelta
+
 import numpy as np
-from datetime import datetime as dt, timedelta
+import quandl
+
+import Constants
 
 # First Date:   1962-01-02 (IBM -> All dates)
 # Num Tickers:  3194
@@ -78,9 +81,9 @@ def generateBatch(tickerPointer, datePointer, isTraining=True):
     batchSize = min(Constants.batchSize, numTickers - tickerPointer)
     sequenceLength = min(Constants.sequenceLength, numDays - datePointer)
 
-    for ticker in tickers[tickerPointer : tickerPointer + batchSize]:
+    for ticker in tickers[tickerPointer: tickerPointer + batchSize]:
         breakFound = False
-        for i, date in enumerate(dates[datePointer : datePointer + sequenceLength]):
+        for i, date in enumerate(dates[datePointer: datePointer + sequenceLength]):
             if date not in tickers_dates[ticker]:
                 breakFound = True
                 continue
@@ -98,7 +101,8 @@ def generateBatch(tickerPointer, datePointer, isTraining=True):
         for i, dateIndex in enumerate(range(datePointer, datePointer + Constants.sequenceLength)):
             if i < sequenceLength and dates[dateIndex] in tickers_dates[tickers[tickerIndex]]:
                 tickerDateIndex = tickers_dates[tickers[tickerIndex]].index(dates[dateIndex])
-                inputSequence.append([feature for feature in data[tickerIndex][tickerDateIndex][1:-1]])
+                inputSequence.append(
+                    [feature for feature in data[tickerIndex][tickerDateIndex][1:-1]])
                 labelSequence.append([data[tickerIndex][tickerDateIndex][-1]])
             else:
                 inputSequence.append([0 for _ in range(numFeatures)])

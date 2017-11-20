@@ -1,10 +1,10 @@
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-import seaborn as sb
 import pandas as pd
-import DataWorker
-import Constants
+import seaborn as sb
 
+import Constants
+import DataWorker
 
 df = pd.DataFrame(index=DataWorker.IDs, columns=DataWorker.TSs)
 

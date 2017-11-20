@@ -1,4 +1,5 @@
 import tensorflow as tf
+
 import Constants
 
 
@@ -43,7 +44,8 @@ class LSTM():
         return tf.contrib.rnn.MultiRNNCell(layers)
 
     def __buildGraph(self):
-        self.outputs, self.state = tf.nn.static_rnn(self.layers, self.inputTensors, initial_state=self.state, dtype=tf.float32)
+        self.outputs, self.state = tf.nn.static_rnn(
+            self.layers, self.inputTensors, initial_state=self.state, dtype=tf.float32)
         self.predictions = self.__getPredictions(self.outputs)
         self.loss = self.__getLoss()
         self.accuracy = self.__getAccuracy()
@@ -56,7 +58,8 @@ class LSTM():
         self.state = self.layers.zero_state(self.batchSize, tf.float32)
 
     def __createMasks(self):
-        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
+        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32)
+                        < tf.reshape(self.lengths, [-1, 1]), tf.float32)
         masks = tf.expand_dims(masks, axis=2)
         return tf.transpose(masks, [1, 0, 2])
 
@@ -73,7 +76,8 @@ class LSTM():
         maskedSquaredDifferences = tf.multiply(squaredDifferences, self.masks)
         totalDifferencePerSequence = tf.reduce_sum(maskedSquaredDifferences, axis=0)
         totalDifferencePerSequence = tf.reshape(totalDifferencePerSequence, [-1])
-        averageDifferencePerSequence = tf.divide(totalDifferencePerSequence, tf.maximum(self.lengths, 1))
+        averageDifferencePerSequence = tf.divide(
+            totalDifferencePerSequence, tf.maximum(self.lengths, 1))
         averageDifferenceOverBatch = tf.reduce_mean(averageDifferencePerSequence)
         return averageDifferenceOverBatch
 
@@ -101,7 +105,8 @@ class LSTM():
         return lastPredictions
 
     def setBatchDict(self, batchSize, inputs, labels, lengths):
-        self.batchDict = {self.batchSize: batchSize, self.inputs: inputs, self.labels: labels, self.lengths: lengths}
+        self.batchDict = {self.batchSize: batchSize, self.inputs: inputs,
+                          self.labels: labels, self.lengths: lengths}
 
     def getBatchLabels(self):
         return self.session.run(self.labels, self.batchDict)

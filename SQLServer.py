@@ -1,7 +1,9 @@
-import sqlalchemy as sqla
-from pandas import read_sql
-import urllib
 import sys
+import urllib
+
+from pandas import read_sql
+
+import sqlalchemy as sqla
 
 driver = 'FreeTDS'
 server = '127.0.0.1'

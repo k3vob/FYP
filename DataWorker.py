@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 import Constants
 
 # Shape:        1,710,756 x 111 (ID, Timestamp, 108 features, y)
@@ -14,7 +15,7 @@ df = df.fillna(0)
 # Sort by last then first timestamp
 df = df.assign(start=df.groupby('id')['timestamp'].transform('min'),
                end=df.groupby('id')['timestamp'].transform('max'))\
-               .sort_values(by=['end', 'start', 'timestamp'])
+    .sort_values(by=['end', 'start', 'timestamp'])
 
 cols = list(df)
 featureNames = ['derived', 'fundamental', 'technical']
@@ -67,7 +68,8 @@ df['y'] = (df['y'] - df['y'].min()) / (df['y'].max() - df['y'].min())
 # df['y'] = df['y'].round(Constants.labelPrecision)
 
 # Shape: (1424, ?, 108) = (numIDs, numIDTimestamps, numFeatures)
-inputMatrix = np.array([df.loc[df['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
+inputMatrix = np.array(
+    [df.loc[df['id'] == ID, [feature for feature in features]].as_matrix() for ID in IDs])
 # Shape: (1424, ?, 1) = (numIDs, numIDTimestamps, y)
 labelMatrix = np.array([df.loc[df['id'] == ID, ['y']].as_matrix() for ID in IDs])
 
@@ -86,8 +88,10 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
         batchSize = len(availableIDs)
 
     IDsComplete = False
-    if isTraining and IDPointer + Constants.batchSize >= len(availableIDs):     # If number of IDs left is < batchSize
-        batchSize = len(availableIDs) - IDPointer                               # Reduce this batch to how many IDs left
+    # If number of IDs left is < batchSize
+    if isTraining and IDPointer + Constants.batchSize >= len(availableIDs):
+        # Reduce this batch to how many IDs left
+        batchSize = len(availableIDs) - IDPointer
         IDsComplete = True                                                      # All IDs have been processed
 
     firstTSFound = False                            # Find the earliest timestamp in this batch
@@ -115,15 +119,21 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
     inputs = np.empty(shape=(batchSize, Constants.sequenceLength, numFeatures))
     labels = np.empty(shape=(batchSize, Constants.sequenceLength, 1))
     lengths = np.empty(shape=(batchSize,))
-    for i, ID_ix in enumerate(range(IDPointer, IDPointer + batchSize)):                     # Iterate over IDs in this batch
+    # Iterate over IDs in this batch
+    for i, ID_ix in enumerate(range(IDPointer, IDPointer + batchSize)):
         lengthFound = False
-        for j, TS in enumerate(range(TSPointer, TSPointer + Constants.sequenceLength)):     # Iterate over timestamps in thit batch
-            if TS in ID_TS_dict[IDs[ID_ix]]:                                                # If this timestamp exist for this ID
-                TS_ix = np.where(ID_TS_dict[IDs[ID_ix]] == TS)                              # Get index of this timestamp for this ID
-                inputs[i][j] = inputMatrix[ID_ix][TS_ix]                                    # Store features at this timestamp for this ID
+        # Iterate over timestamps in thit batch
+        for j, TS in enumerate(range(TSPointer, TSPointer + Constants.sequenceLength)):
+            # If this timestamp exist for this ID
+            if TS in ID_TS_dict[IDs[ID_ix]]:
+                # Get index of this timestamp for this ID
+                TS_ix = np.where(ID_TS_dict[IDs[ID_ix]] == TS)
+                # Store features at this timestamp for this ID
+                inputs[i][j] = inputMatrix[ID_ix][TS_ix]
                 labels[i][j] = labelMatrix[ID_ix][TS_ix]
             else:                                                                           # If this timestamp doesn't exist for this ID
-                inputs[i][j] = np.zeros(shape=(108,))                                       # Pad with feature array of 0s
+                # Pad with feature array of 0s
+                inputs[i][j] = np.zeros(shape=(108,))
                 labels[i][j] = np.zeros(shape=(1,))
                 if not lengthFound:
                     lengths[i] = j
@@ -133,7 +143,8 @@ def generateBatch(IDPointer, TSPointer, isTraining=True):
 
     TSPointer += Constants.sequenceLength                   # Increment TSPointer for next batch
 
-    TSsComplete = True                                      # Check if these batchSize IDs have no more timestamps
+    # Check if these batchSize IDs have no more timestamps
+    TSsComplete = True
     for ID_ix in range(IDPointer, IDPointer + batchSize):
         if TSPointer in ID_TS_dict[IDs[ID_ix]]:
             TSsComplete = False

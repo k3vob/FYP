@@ -1,5 +1,5 @@
-import DataWorker
 import Constants
+import DataWorker
 from Model import LSTM
 
 inputShape = [Constants.sequenceLength, DataWorker.numFeatures]
@@ -21,13 +21,15 @@ for epoch in range(Constants.numEpochs):
     epochAcc = 0
     while not epochComplete:
         batchNum += 1
-        batchSize, batchX, batchY, batchLengths, resetState, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(IDPointer, TSPointer)
+        batchSize, batchX, batchY, batchLengths, resetState, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(
+            IDPointer, TSPointer)
         LSTM.setBatchDict(batchSize, batchX, batchY, batchLengths)
         if resetState:
             LSTM.resetState()
         LSTM.processBatch()
         epochAcc += LSTM.getBatchAccuracy()
-        if epochComplete: epochAccs.append(str("%.2f" % (epochAcc / batchNum)))
+        if epochComplete:
+            epochAccs.append(str("%.2f" % (epochAcc / batchNum)))
         if batchNum % Constants.printStep == 0 or epochComplete:
             print("Epoch:\t\t", str(epoch + 1))
             print("Epoch Acc:\t", epochAccs)

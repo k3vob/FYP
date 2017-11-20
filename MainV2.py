@@ -1,6 +1,6 @@
-import QuandlDataWorker
-import DataWorker
 import Constants
+import DataWorker
+import QuandlDataWorker
 from Model2 import LSTM
 
 

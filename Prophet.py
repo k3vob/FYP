@@ -1,8 +1,9 @@
-from fbprophet import Prophet
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from fbprophet import Prophet
+
 import Constants
-import matplotlib.pyplot as plt
 
 dir = Constants.dataDir + "Quandl/"
 # 1938
