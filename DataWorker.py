@@ -1,6 +1,5 @@
 import datetime as dt
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import pandas_market_calendars
 import quandl
@@ -29,10 +28,7 @@ df = quandl.get_table(
           'lte': endDate},
     paginate=True)
 
-
-df['date'] = [day.date() for day in df['date']]
-df.set_index('date', inplace=True)
-df.drop(['ticker', 'open', 'high', 'low', 'close', 'ex-dividend',
+df.drop(['date', 'ticker', 'open', 'high', 'low', 'close', 'ex-dividend',
          'volume', 'split_ratio'], axis=1, inplace=True)
 
 df['change'] = df['adj_close'].pct_change()
@@ -50,10 +46,11 @@ numFeatures = df.shape[1] - 1
 
 df = (df - df.min()) / (df.max() - df.min())
 
+totalDays = int(df.shape[0])
+trainingDays = int((totalDays // (1 / Constants.trainingPercentage) //
+                    Constants.sequenceLength) * Constants.sequenceLength)
+testingDays = int(totalDays - trainingDays)
+
 x = df.iloc[:, :-1].as_matrix()
 y = df.iloc[:, -1].as_matrix()
 y = y.reshape(y.shape[0], 1)
-
-# plt.plot(df['adj_close'])
-# plt.plot(df['moving_avg'])
-# plt.show()
