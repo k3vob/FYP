@@ -11,7 +11,10 @@ LSTM = LSTM(inputShape, outputShape)
 # TRAINING
 # #############################################
 # Epoch:		 16
-# Epoch Acc:	 ['85.52', '91.52', '91.96', '92.09', '92.15', '92.19', '92.21', '92.23', '92.25', '92.27', '92.28', '92.29', '92.29', '92.30', '92.30']
+# EpochAcc:
+#     '85.52', '91.52', '91.96', '92.09', '92.15', '92.19', '92.21', '92.23',
+#     '92.25', '92.27', '92.28', '92.29', '92.29', '92.30', '92.30'
+
 epochAccs = []
 for epoch in range(Constants.numEpochs):
     print("***** EPOCH:", epoch + 1, "*****\n")
@@ -21,8 +24,9 @@ for epoch in range(Constants.numEpochs):
     epochAcc = 0
     while not epochComplete:
         batchNum += 1
-        batchSize, batchX, batchY, batchLengths, resetState, IDPointer, TSPointer, epochComplete = DataWorker.generateBatch(
-            IDPointer, TSPointer)
+        batchSize, batchX, batchY, batchLengths, \
+            resetState, IDPointer, TSPointer, epochComplete = \
+            DataWorker.generateBatch(IDPointer, TSPointer)
         LSTM.setBatchDict(batchSize, batchX, batchY, batchLengths)
         if resetState:
             LSTM.resetState()
@@ -47,7 +51,8 @@ for epoch in range(Constants.numEpochs):
 # #############################################
 # TESTING
 # #############################################
-testSize, testX, testY, testLengths, resetState = DataWorker.generateTestBatch()
+testSize, testX, testY, testLengths, resetState = \
+    DataWorker.generateTestBatch()
 LSTM.setBatchDict(testSize, testX, testY, testLengths)
 if resetState:
     LSTM.resetState()

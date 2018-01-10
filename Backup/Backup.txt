@@ -73,3 +73,38 @@ freqs[-1] += df['y'][df['y'] >= binEnd].count()
 
 plt.bar(binStarts[:-1] + np.diff(binStarts) / 2, freqs[:(numBins // 2)] + freqs[(numBins // 2) + 1:], np.diff(binStarts))
 plt.show()
+
+
+def twoSigma():
+
+    lstm = LSTM(numFeatures=108)
+
+    # #############################################
+    # TRAINING
+    # #############################################
+
+    for epoch in range(Constants.numEpochs):
+        print("***** EPOCH:", epoch + 1, "*****\n")
+        epochComplete = False
+        IDPointer, TSPointer = 0, 0
+        batchNum = 0
+        while not epochComplete:
+            batchNum += 1
+            batchSz, batchX, batchY, batchLens, \
+                resetState, IDPointer, TSPointer, epochComplete = \
+                DataWorker.generateBatch(IDPointer, TSPointer)
+            if resetState:
+                lstm.resetState()
+            lstm.setBatchDict(batchX, batchY, batchLens)
+            lstm.processBatch()
+
+            if batchNum % Constants.printStep == 0 or epochComplete:
+                print("Batch:\t\t", batchNum)
+                print("Loss:\t\t", lstm.getBatchLoss())
+
+                label = lstm.getLastLabels()
+                pred = lstm.getLastPredictions()
+                print("\nLabels\t\t Predictions")
+                for lab_pred in zip(label, pred):
+                    print(lab_pred[0], "\t", lab_pred[1])
+                print("\n")

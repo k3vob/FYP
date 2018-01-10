@@ -4,7 +4,6 @@ import Constants
 
 
 class LSTM():
-
     def __init__(self,
                  inputShape,
                  outputShape,
@@ -17,7 +16,8 @@ class LSTM():
         self.lengths = tf.placeholder(tf.float32, [None])
         self.inputTensors = tf.unstack(self.inputs, axis=1)
         self.labelTensors = tf.unstack(self.labels, axis=1)
-        self.weights = tf.Variable(tf.random_normal([numHidden] + [outputShape[-1]]))
+        self.weights = tf.Variable(
+            tf.random_normal([numHidden] + [outputShape[-1]]))
         self.bias = tf.Variable(tf.random_normal([outputShape[-1]]))
         self.masks = self.__createMasks()
         self.layers = self.__createStackedLSTM(numHidden, numLayers)
@@ -29,8 +29,8 @@ class LSTM():
         self.loss = None
         self.accuracy = None
         self.optimise = None
-        self.lastLabels = None       # last set of sequenceLength number of labels of the batch
-        self.lastPredictions = None  # last set of sequenceLength number of predictions of the batch
+        self.lastLabels = None  # last set of seqLength number of the batch
+        self.lastPredictions = None
         self.session = tf.Session()
         self.resetState()
         self.__buildGraph()
@@ -39,13 +39,17 @@ class LSTM():
         layers = []
         for _ in range(numLayers):
             layer = tf.contrib.rnn.BasicLSTMCell(numHidden)
-            layer = tf.contrib.rnn.DropoutWrapper(layer, output_keep_prob=1.0 - Constants.dropout)
+            layer = tf.contrib.rnn.DropoutWrapper(
+                layer, output_keep_prob=1.0 - Constants.dropout)
             layers.append(layer)
         return tf.contrib.rnn.MultiRNNCell(layers)
 
     def __buildGraph(self):
         self.outputs, self.state = tf.nn.static_rnn(
-            self.layers, self.inputTensors, initial_state=self.state, dtype=tf.float32)
+            self.layers,
+            self.inputTensors,
+            initial_state=self.state,
+            dtype=tf.float32)
         self.predictions = self.__getPredictions(self.outputs)
         self.loss = self.__getLoss()
         self.accuracy = self.__getAccuracy()
@@ -58,12 +62,17 @@ class LSTM():
         self.state = self.layers.zero_state(self.batchSize, tf.float32)
 
     def __createMasks(self):
-        masks = tf.cast(tf.cast(tf.range(Constants.sequenceLength), tf.float32) < tf.reshape(self.lengths, [-1, 1]), tf.float32)
+        masks = tf.cast(
+            tf.cast(tf.range(Constants.sequenceLength), tf.float32) <
+            tf.reshape(self.lengths, [-1, 1]), tf.float32)
         masks = tf.expand_dims(masks, axis=2)
         return tf.transpose(masks, [1, 0, 2])
 
     def __getPredictions(self, outputs):
-        predictions = [tf.add(tf.matmul(output, self.weights), self.bias) for output in outputs]
+        predictions = [
+            tf.add(tf.matmul(output, self.weights), self.bias)
+            for output in outputs
+        ]
         activatedPredictions = self.__activate(predictions)
         return activatedPredictions
 
@@ -73,11 +82,14 @@ class LSTM():
     def __getLoss(self):
         squaredDifferences = tf.square((self.labelTensors - self.predictions))
         maskedSquaredDifferences = tf.multiply(squaredDifferences, self.masks)
-        totalDifferencePerSequence = tf.reduce_sum(maskedSquaredDifferences, axis=0)
-        totalDifferencePerSequence = tf.reshape(totalDifferencePerSequence, [-1])
-        averageDifferencePerSequence = tf.divide(
-            totalDifferencePerSequence, tf.maximum(self.lengths, 1))
-        averageDifferenceOverBatch = tf.reduce_mean(averageDifferencePerSequence)
+        totalDifferencePerSequence = tf.reduce_sum(
+            maskedSquaredDifferences, axis=0)
+        totalDifferencePerSequence = tf.reshape(totalDifferencePerSequence,
+                                                [-1])
+        averageDifferencePerSequence = tf.divide(totalDifferencePerSequence,
+                                                 tf.maximum(self.lengths, 1))
+        averageDifferenceOverBatch = tf.reduce_mean(
+            averageDifferencePerSequence)
         return averageDifferenceOverBatch
 
     def __getAccuracy(self):
@@ -85,7 +97,8 @@ class LSTM():
         maskedErrors = tf.multiply(errors, self.masks)
         totalErrorPerSequence = tf.reduce_sum(maskedErrors, axis=0)
         totalErrorPerSequence = tf.reshape(totalErrorPerSequence, [-1])
-        averageErrorPerSequence = tf.divide(totalErrorPerSequence, tf.maximum(self.lengths, 1))
+        averageErrorPerSequence = tf.divide(totalErrorPerSequence,
+                                            tf.maximum(self.lengths, 1))
         averageErrorOverBatch = tf.reduce_mean(averageErrorPerSequence)
         percentageAccuracy = (1 - averageErrorOverBatch) * 100
         return percentageAccuracy
@@ -104,8 +117,12 @@ class LSTM():
         return lastPredictions
 
     def setBatchDict(self, batchSize, inputs, labels, lengths):
-        self.batchDict = {self.batchSize: batchSize, self.inputs: inputs,
-                          self.labels: labels, self.lengths: lengths}
+        self.batchDict = {
+            self.batchSize: batchSize,
+            self.inputs: inputs,
+            self.labels: labels,
+            self.lengths: lengths
+        }
 
     def getBatchLabels(self):
         return self.session.run(self.labels, self.batchDict)

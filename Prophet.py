@@ -7,7 +7,8 @@ import Constants
 
 dir = Constants.dataDir + "Quandl/"
 # 1938
-data = np.load(dir + "10YearData.npy")[1938]    # (numTickers, numDaysForTicker, 5)
+# (numTickers, numDaysForTicker, 5)
+data = np.load(dir + "10YearData.npy")[1938]
 
 dates = []
 y = []
