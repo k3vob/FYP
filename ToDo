@@ -1,3 +1,9 @@
+- Stateful
+- Learning Rate decay
+- Predict more than 1 day (use predictions for further predicting)
+- Features created (moving average & percent change)
+- Train on all tickers (batches)
+
 Wiki:
 - Correct links between pages
 - Batching Algo Diagrams

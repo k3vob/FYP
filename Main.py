@@ -42,6 +42,7 @@ for epoch in range(Constants.numEpochs):
 # TESTING
 #################################
 
+# Plot trained data
 pointer = 0
 actual = []
 train = []
@@ -55,6 +56,7 @@ while (pointer + Constants.sequenceLength) <= DataWorker.trainingDays:
     trainLosses.append(lstm.getBatchLoss())
     pointer += 1
 
+# Plot unseen testing data
 test = []
 testLosses = []
 while (pointer + Constants.sequenceLength) <= DataWorker.totalDays:
@@ -71,9 +73,10 @@ print("Unseen Data Loss:\t", sum(testLosses) / len(testLosses))
 
 plt.plot(actual, label="Actual")
 plt.plot(train, label="Training")
-plt.plot([x for x in range(DataWorker.trainingDays - Constants.sequenceLength,
-                           DataWorker.totalDays - Constants.sequenceLength)],
-         test,
-         label="Testing")
+plt.plot([x for x in range(
+    DataWorker.trainingDays - Constants.sequenceLength,
+    DataWorker.totalDays - Constants.sequenceLength)],
+    test,
+    label="Testing")
 plt.legend()
 plt.show()
