@@ -24,7 +24,7 @@ endDate = tradingDays[-1]
 
 df = quandl.get_table(
     'WIKI/PRICES',
-    ticker='AAPL',
+    ticker='BAC',
     date={'gte': startDate,
           'lte': endDate},
     paginate=True)
@@ -34,7 +34,7 @@ df['date'] = [day.date() for day in df['date']]
 df.set_index('date', inplace=True)
 
 # Unneeded columns
-df.drop(['open', 'high', 'low', 'close', 'ex-dividend',
+df.drop(['ticker', 'open', 'high', 'low', 'close', 'ex-dividend',
          'volume', 'split_ratio'], axis=1, inplace=True)
 
 # Percent change of closing price from one day to the next
@@ -55,8 +55,7 @@ df = pd.concat([df, adj_close], axis=1)
 numFeatures = df.shape[1] - 1
 
 # Normalise all to [0, 1]
-df.iloc[:, 1:] = ((df.iloc[:, 1:] - df.iloc[:, 1:].min()) /
-                  (df.iloc[:, 1:].max() - df.iloc[:, 1:].min()))
+df = (df - df.min()) / (df.max() - df.min())
 
 # Counts for training, testing and total data
 totalDays = int(df.shape[0])
@@ -64,7 +63,7 @@ trainingDays = int((totalDays // (1 / Constants.trainingPercentage) //
                     Constants.sequenceLength) * Constants.sequenceLength)
 testingDays = int(totalDays - trainingDays)
 
-# Numpy arrays of data              # Shapes
-x = df.iloc[:, 1:-1].as_matrix()    # [totalDays, numFeatures]
+# Numpy arrays of data
+x = df.iloc[:, :-1].as_matrix()    # [totalDays, numFeatures]
 y = df.iloc[:, -1].as_matrix()      # [totalDays]
 y = y.reshape(y.shape[0], 1)        # [totdalDays, 1]
