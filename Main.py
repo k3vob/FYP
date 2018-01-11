@@ -12,6 +12,7 @@ lstm = LSTM(numFeatures=DataWorker.numFeatures, numOutputs=1)
 
 
 def decayLearningRate(learningRate, loss):
+    # 0.01 -> 0.001 -> 0.0001 -> ...
     if loss < learningRate:
         learningRate /= 10
     return learningRate
