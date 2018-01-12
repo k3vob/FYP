@@ -96,6 +96,7 @@ class LSTM():
 
     def __activate(self, outputs):
         """Applies activation function to all ouputs of the network."""
+        # predictions = tf.minimum(tf.maximum(outputs, 0), 1)
         predictions = tf.nn.relu(outputs)
         predictions = tf.unstack(predictions, axis=0)
         return predictions
@@ -122,7 +123,7 @@ class LSTM():
 
     def getBatchLabels(self):
         """Returns unrolled list of labels of shape [batchSize, numOutputs]."""
-        return self.session.run(self.labels, self.batchDict)
+        return self.session.run(self.labelsUnrolled, self.batchDict)
 
     def getBatchPredictions(self):
         """Returns unrolled list of predictions of shape [batchSize, numOutputs]."""

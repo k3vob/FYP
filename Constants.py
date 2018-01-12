@@ -7,8 +7,8 @@ defaultFile = dataDir + 'train.h5'
 
 sequenceLength = 25
 batchSize = 1
-numEpochs = 7500
-numLayers = 3
+numEpochs = 250
+numLayers = 4
 numHidden = 100
 initialLearningRate = 0.001
 forgetBias = 1.0

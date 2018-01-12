@@ -52,7 +52,7 @@ adj_close = df['adj_close']
 df.drop(labels=['adj_close'], axis=1, inplace=True)
 df = pd.concat([df, adj_close], axis=1)
 
-numFeatures = df.shape[1]
+numFeatures = df.shape[1] - 1
 
 minPrice = df['adj_close'].min()
 maxPrice = df['adj_close'].max()
@@ -68,13 +68,13 @@ def denormalise(prediction):
 
 # Counts for training, testing and total data
 totalDays = int(df.shape[0])
-trainingDays = int(((totalDays) // (1 / Constants.trainingPercentage) //
-                    Constants.sequenceLength) * Constants.sequenceLength) + 1
+trainingDays = int((totalDays // (1 / Constants.trainingPercentage) //
+                    Constants.sequenceLength) * Constants.sequenceLength)
 testingDays = int(totalDays - trainingDays)
 
 years = sorted(set(list([date.year for date in df.index.values])))
 
 # Numpy arrays of data
-x = df.as_matrix()                  # [totalDays, numFeatures]
+x = df.iloc[:, :-1].as_matrix()    # [totalDays, numFeatures]
 y = df.iloc[:, -1].as_matrix()      # [totalDays]
 y = y.reshape(y.shape[0], 1)        # [totdalDays, 1]

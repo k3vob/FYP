@@ -1,9 +1,16 @@
 - Stateful
 - Learning Rate decay
+- all sequenceLength labels/predictions or just last one
 - Dropout
 - Predict more than 1 day (use predictions for further predicting)
 - Features created (moving average & percent change)
+- ssh
+
+vision.ucd.ie
+kobrien
+
 - Train on all tickers (batches)
+- Create features & sentiment analysis
 
 Wiki:
 - Correct links between pages
