@@ -1,8 +1,13 @@
+import os
+
 import matplotlib.pyplot as plt
 
 import Constants
 import DataWorker
 from Model import LSTM
+
+# Disable GPU
+# os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
 lstm = LSTM(numFeatures=DataWorker.numFeatures, numOutputs=1)
 
@@ -76,12 +81,12 @@ while (pointer + Constants.sequenceLength) < DataWorker.totalDays:
 print("Seen Data Loss:  \t", sum(trainLosses) / len(trainLosses))
 print("Unseen Data Loss:\t", sum(testLosses) / len(testLosses))
 
-plt.plot(actual, label="Actual")
-plt.plot(train, label="Training")
-plt.plot([x for x in range(
-    DataWorker.trainingDays - Constants.sequenceLength,
-    DataWorker.totalDays - Constants.sequenceLength)],
-    test,
-    label="Testing")
-plt.legend()
-plt.show()
+# plt.plot(actual, label="Actual")
+# plt.plot(train, label="Training")
+# plt.plot([x for x in range(
+#     DataWorker.trainingDays - Constants.sequenceLength,
+#     DataWorker.totalDays - Constants.sequenceLength)],
+#     test,
+#     label="Testing")
+# plt.legend()
+# plt.show()
