@@ -14,6 +14,7 @@ dir = Constants.dataDir + "Quandl/"
 quandl.ApiConfig.api_key = 'JFhNxibR4aonVzfd98XC'
 
 # Get trading days
+# NO QUANDL DATA FOR 2017-11-08
 endDate = dt.date(2017, 12, 31)
 startDate = endDate - dt.timedelta(days=int(365.25 * Constants.years))
 tradingDays = pandas_market_calendars.get_calendar('NYSE').valid_days(
@@ -77,4 +78,4 @@ years = sorted(set(list([date.year for date in df.index.values])))
 # Numpy arrays of data
 x = df.as_matrix()                  # [totalDays, numFeatures]
 y = df.iloc[:, -1].as_matrix()      # [totalDays]
-y = y.reshape(y.shape[0], 1)        # [totdalDays, 1]
+y = y.reshape(y.shape[0], 1)        # [totalDays, 1]
