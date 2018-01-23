@@ -3,13 +3,13 @@ import os
 import matplotlib.pyplot as plt
 
 import Constants
-import DataWorker
+import DataWorker2 as dw
 from Model import LSTM
 
 # Disbale GPU
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-lstm = LSTM(numFeatures=DataWorker.numFeatures, numOutputs=1)
+lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=1)
 
 
 def decayLearningRate(learningRate, loss):
@@ -27,66 +27,49 @@ learningRate = Constants.initialLearningRate
 
 for epoch in range(Constants.numEpochs):
     print("***** EPOCH:", epoch + 1, "*****\n")
-    pointer = 0
-    batchLosses = []
-    while (pointer + Constants.sequenceLength) < DataWorker.trainingDays:
-        x = [DataWorker.x[pointer:(pointer + Constants.sequenceLength)]]
-        y = [DataWorker.y[(pointer + 1):
-                          (pointer + Constants.sequenceLength + 1)]]
-        lstm.setBatch(learningRate, x, y)
-        lstm.train()
-        batchLosses.append(lstm.getBatchLoss())
-        pointer += Constants.sequenceLength
-    lstm.resetState()
-    epochLoss = sum(batchLosses) / len(batchLosses)
-    print("Learning Rate:\t", learningRate)
-    print("Average Loss:\t", epochLoss)
-    print("")
-    learningRate = decayLearningRate(learningRate, epochLoss)
+    tickerPointer = -1
+    count = 1
+    while tickerPointer != 0:
+        tickerPointer = max(tickerPointer, 0)
+        tickerLosses = []
+        dayPointer = -1
+        while dayPointer != 0:
+            dayPointer = max(dayPointer, 0)
+            x, y, tickerPointer, dayPointer = dw.getBatch(tickerPointer, dayPointer)
+            lstm.setBatch(learningRate, x, y)
+            lstm.train()
+            tickerLosses.append(lstm.getBatchLoss())
+            # print(lstm.getBatchPredictions()[-1][-1][-1], lstm.getBatchLabels()[-1][-1][-1])
+        lstm.resetState()
+        loss = sum(tickerLosses) / len(tickerLosses)
+        print(count, "/", dw.numTickerGroups)
+        print("LR:\t", learningRate)
+        print("Loss:\t", loss)
+        print("")
+        learningRate = decayLearningRate(learningRate, loss)
+        count += 1
 
 #################################
 # TESTING
 #################################
 
-# Plot trained data
-pointer = 0
 actual = []
-train = []
-trainLosses = []
-while (pointer + Constants.sequenceLength) < DataWorker.trainingDays:
-    x = [DataWorker.x[pointer:(pointer + Constants.sequenceLength)]]
-    y = [DataWorker.y[(pointer + 1):(pointer + Constants.sequenceLength + 1)]]
-    lstm.setBatch(0, x, y)
-    label = DataWorker.denormalise(lstm.getBatchLabels()[-1][-1])
-    prediction = DataWorker.denormalise(lstm.getBatchPredictions()[-1][-1])
-    actual.append(label)
-    train.append(prediction)
-    trainLosses.append(lstm.getBatchLoss())
-    pointer += 1
-
-# Plot unseen testing data
 test = []
 testLosses = []
-while (pointer + Constants.sequenceLength) < DataWorker.totalDays:
-    x = [DataWorker.x[pointer:(pointer + Constants.sequenceLength)]]
-    y = [DataWorker.y[(pointer + 1):(pointer + Constants.sequenceLength + 1)]]
+tickerPointer = len(dw.tickers) - 1
+dayPointer = -1
+while dayPointer != 0:
+    dayPointer = max(dayPointer, 0)
+    x, y, _, dayPointer = dw.getBatch(tickerPointer, dayPointer, False)
     lstm.setBatch(0, x, y)
-    label = DataWorker.denormalise(lstm.getBatchLabels()[-1][-1])
-    prediction = DataWorker.denormalise(lstm.getBatchPredictions()[-1][-1])
-    actual.append(label)
-    test.append(prediction)
+    lstm.train()
     testLosses.append(lstm.getBatchLoss())
-    pointer += 1
-
-print("Seen Data Loss:  \t", sum(trainLosses) / len(trainLosses))
-print("Unseen Data Loss:\t", sum(testLosses) / len(testLosses))
+    actual.append(lstm.getBatchLabels()[-1][-1][-1])
+    test.append(lstm.getBatchPredictions()[-1][-1][-1])
+loss = sum(testLosses) / len(testLosses)
+print("Testing Loss:\t", loss)
 
 plt.plot(actual, label="Actual")
-plt.plot(train, label="Training")
-plt.plot([x for x in range(
-    DataWorker.trainingDays - Constants.sequenceLength,
-    DataWorker.totalDays - Constants.sequenceLength)],
-    test,
-    label="Testing")
+plt.plot(test, label="Testing")
 plt.legend()
 plt.show()

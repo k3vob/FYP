@@ -105,8 +105,8 @@ class LSTM():
         loss = tf.losses.mean_squared_error(
             labels=self.labelsUnrolled, predictions=self.predictions
         )
-        # return loss           # MSE
-        return tf.sqrt(loss)    # RMSE
+        return loss           # MSE
+        # return tf.sqrt(loss)    # RMSE
 
     def resetState(self):
         """Resets memory state of LSTM."""
