@@ -1,4 +1,5 @@
 - Test difference in features created (moving average & percent change)
+- plot last actual to current prediction
 - Dropout
 - Normalise tickers collectivley or individually?
 - Predict more than 1 day (use predictions for further predicting)

@@ -17,20 +17,20 @@ quandl.ApiConfig.api_key = 'JFhNxibR4aonVzfd98XC'
 
 dir = Constants.dataDir + "Quandl/"
 
-# ################################################################################
-# # Get trading days
-# ################################################################################
-#
-# missingDay = dt.date(2017, 11, 8)   # MISSING FROM QUANDL
-# endDate = dt.date(2017, 12, 31)
-# startDate = endDate - dt.timedelta(days=int(365.25 * Constants.years))
-# tradingDays = pandas_market_calendars.get_calendar('NYSE').valid_days(
-#     start_date=startDate, end_date=endDate)
-# tradingDays = [day.date() for day in tradingDays]
-# tradingDays.remove(missingDay)
-# startDate = tradingDays[0]
-# endDate = tradingDays[-1]
-#
+################################################################################
+# Get trading days
+################################################################################
+
+missingDay = dt.date(2017, 11, 8)   # MISSING FROM QUANDL
+endDate = dt.date(2017, 12, 31)
+startDate = endDate - dt.timedelta(days=int(365.25 * Constants.years))
+tradingDays = pandas_market_calendars.get_calendar('NYSE').valid_days(
+    start_date=startDate, end_date=endDate)
+tradingDays = [day.date() for day in tradingDays]
+tradingDays.remove(missingDay)
+startDate = tradingDays[0]
+endDate = tradingDays[-1]
+
 # ################################################################################
 # # Get S&P 500 tickers
 # ################################################################################

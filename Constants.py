@@ -10,9 +10,9 @@ batchSize = 100
 numEpochs = 50
 numLayers = 4
 numHidden = 100
-initialLearningRate = 0.001
+initialLearningRate = 0.001     # 0.0001 needed to avoid predicting all 0.0
 forgetBias = 1.0
-dropoutRate = 0.0
+dropoutRate = 0.5
 trainingPercentage = 0.8
 printStep = 50
 

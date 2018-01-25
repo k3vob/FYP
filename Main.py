@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 
 import Constants
-import DataWorker2 as dw
+import DataWorker as dw
 from Model import LSTM
 
 # Disbale GPU
@@ -19,13 +19,16 @@ def decayLearningRate(learningRate, loss):
     return learningRate
 
 
-learningRate = Constants.initialLearningRate
+learningRate = 0.0001
+#learningRate = Constants.initialLearningRate
 
 #################################
 # TRAINING
 #################################
 
 for epoch in range(Constants.numEpochs):
+    if epoch == 1:
+        learningRate = Constants.initialLearningRate
     print("***** EPOCH:", epoch + 1, "*****\n")
     tickerPointer = -1
     count = 1
@@ -39,7 +42,7 @@ for epoch in range(Constants.numEpochs):
             lstm.setBatch(learningRate, x, y)
             lstm.train()
             tickerLosses.append(lstm.getBatchLoss())
-            # print(lstm.getBatchPredictions()[-1][-1][-1], lstm.getBatchLabels()[-1][-1][-1])
+            #print(lstm.getBatchPredictions()[-1][-1][-1], lstm.getBatchLabels()[-1][-1][-1])
         lstm.resetState()
         loss = sum(tickerLosses) / len(tickerLosses)
         print(count, "/", dw.numTickerGroups)
@@ -58,18 +61,25 @@ test = []
 testLosses = []
 tickerPointer = len(dw.tickers) - 1
 dayPointer = -1
+lastLabel = None
+count = 0
 while dayPointer != 0:
     dayPointer = max(dayPointer, 0)
     x, y, _, dayPointer = dw.getBatch(tickerPointer, dayPointer, False)
     lstm.setBatch(0, x, y)
     lstm.train()
     testLosses.append(lstm.getBatchLoss())
-    actual.append(lstm.getBatchLabels()[-1][-1][-1])
-    test.append(lstm.getBatchPredictions()[-1][-1][-1])
+    label = lstm.getBatchLabels()[-1][-1][-1]
+    prediction = lstm.getBatchPredictions()[-1][-1][-1]
+    actual.append(label)
+    if lastLabel is not None:
+        test.append([[count, count + 1], [lastLabel, prediction]])
+        count += 1
+    lastLabel = label
 loss = sum(testLosses) / len(testLosses)
 print("Testing Loss:\t", loss)
 
-plt.plot(actual, label="Actual")
-plt.plot(test, label="Testing")
-plt.legend()
+plt.plot(actual)
+for t in test:
+    plt.plot(t[0], t[1], c='r')
 plt.show()

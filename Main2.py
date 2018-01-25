@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 
 import Constants
-import DataWorker
+import DataWorker2
 from Model import LSTM
 
 # Disbale GPU
