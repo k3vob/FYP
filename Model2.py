@@ -58,10 +58,8 @@ class LSTM():
 
         self.state = None
         self.batchDict = None
-        self.outputs = None
         self.predictions = None
         self.loss = None
-        self.accuracy = None
         self.lossMinimiser = None
         self.session = tf.Session()
         self.__buildTensorFlowGraph()
@@ -82,47 +80,33 @@ class LSTM():
     def __buildTensorFlowGraph(self):
         """Initialises all TensorFlow graph operations."""
         self.resetState()
-        self.outputs, self.state = tf.nn.static_rnn(
+        outputs, self.state = tf.nn.static_rnn(
             self.network,
             self.inputsUnrolled,
             initial_state=self.state,
             dtype=tf.float32
         )
-        self.outputs = [
+        outputs = [
             tf.add(tf.matmul(output, self.weights), self.biases)
-            for output in self.outputs
+            for output in outputs
         ]
-        self.predictions = self.__activateOutputs()
+        self.predictions = self.__activate(outputs)
         self.loss = self.__calculateLoss()
-        self.accuracy = self.__calculateAccuracy()
         self.lossMinimiser = self.gradientDescentOptimiser.minimize(self.loss)
 
-    def __activateOutputs(self):
+    def __activate(self, outputs):
         """Applies activation function to all ouputs of the network."""
-        predictions = tf.nn.softmax(self.outputs)
+        predictions = tf.nn.relu(outputs)
         predictions = tf.unstack(predictions, axis=0)
         return predictions
 
     def __calculateLoss(self):
-        """Calculates batch loss between predictions and labels."""
-        # loss = tf.reduce_mean(
-        #     tf.nn.sigmoid_cross_entropy_with_logits(
-        #         labels=self.labelsUnrolled, logits=self.outputs
-        #     )
-        # )
-        # return loss
-
+        """Calculates loss between predictions and labels."""
         loss = tf.losses.mean_squared_error(
             labels=self.labelsUnrolled, predictions=self.predictions
         )
-        return tf.sqrt(loss)    # RMSE
-
-    def __calculateAccuracy(self):
-        """Calculates batch accuracy of predictions against labels."""
-        correctPredictions = tf.equal(tf.argmax(self.predictions, axis=2),
-                                      tf.argmax(self.labelsUnrolled, axis=2))
-        accuracy = tf.reduce_mean(tf.cast(correctPredictions, tf.float32))
-        return accuracy
+        return loss           # MSE
+        # return tf.sqrt(loss)    # RMSE
 
     def resetState(self):
         """Resets memory state of LSTM."""
@@ -137,25 +121,25 @@ class LSTM():
             self.labels: labels
         }
 
+    def getBatchLabels(self):
+        """Returns unrolled list of labels of shape [batchSize, numOutputs]."""
+        return self.session.run(self.labels, self.batchDict)
+
+    def getBatchPredictions(self):
+        """Returns unrolled list of predictions of shape [batchSize, numOutputs]."""
+        return self.session.run(self.predictions, self.batchDict)
+
+    def getBatchLoss(self):
+        """Returns value of loss for batch."""
+        return self.session.run(self.loss, self.batchDict)
+
     def train(self):
         """Executes full forward and backpropagation of network."""
         return self.session.run(self.lossMinimiser, self.batchDict)
 
-    def get(self, operations):
-        """Returns a tuple of the requested operations."""
-        ops = []
-        for op in operations:
-            if op == 'labels':
-                ops.append(self.labelsUnrolled)
-            if op == 'predictions':
-                ops.append(self.predictions)
-            if op == 'loss':
-                ops.append(self.loss)
-            if op == 'accuracy':
-                ops.append(self.accuracy)
-
-        return self.session.run(ops, self.batchDict)
-
     def kill(self):
         """Ends TensorFlow Session."""
         self.session.close()
+
+    def test(self):
+        return self.session.run(self.state, self.batchDict)

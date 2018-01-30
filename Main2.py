@@ -1,92 +1,95 @@
+###
+# PREDICTS ACTUAL PRICE
+###
+
 import os
+from itertools import cycle
 
 import matplotlib.pyplot as plt
 
 import Constants
-import DataWorker2
-from Model import LSTM
+import DataWorker2 as dw
+from Model2 import LSTM
 
 # Disbale GPU
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-lstm = LSTM(numFeatures=DataWorker.numFeatures, numOutputs=1)
+lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=1)
 
 
 def decayLearningRate(learningRate, loss):
     # 0.01 -> 0.001 -> 0.0001 -> ...
-    if loss < learningRate * 10:
+    if loss < learningRate:  # * 10:
         learningRate /= 10
     return learningRate
 
 
-learningRate = Constants.initialLearningRate
+learningRate = Constants.seedLearningRate
+
+LRs = cycle([0.01, 0.001, 0.0001, 0.00001])
 
 #################################
 # TRAINING
 #################################
 
 for epoch in range(Constants.numEpochs):
+    # if epoch == 1:
+    #     learningRate = Constants.initialLearningRate
     print("***** EPOCH:", epoch + 1, "*****\n")
-    pointer = 0
-    batchLosses = []
-    while (pointer + Constants.sequenceLength) < DataWorker.trainingDays:
-        x = [DataWorker.x[pointer:(pointer + Constants.sequenceLength)]]
-        y = [DataWorker.y[(pointer + 1):
-                          (pointer + Constants.sequenceLength + 1)]]
-        lstm.setBatch(learningRate, x, y)
-        lstm.train()
-        batchLosses.append(lstm.getBatchLoss())
-        pointer += Constants.sequenceLength
-    lstm.resetState()
-    epochLoss = sum(batchLosses) / len(batchLosses)
-    print("Learning Rate:\t", learningRate)
-    print("Average Loss:\t", epochLoss)
-    print("")
-    learningRate = decayLearningRate(learningRate, epochLoss)
+    tickerPointer = -1
+    count = 1
+    while tickerPointer != 0:
+        tickerPointer = max(tickerPointer, 0)
+        tickerLosses = []
+        dayPointer = -1
+        while dayPointer != 0:
+            dayPointer = max(dayPointer, 0)
+            x, y, tickerPointer, dayPointer = dw.getBatch(tickerPointer, dayPointer)
+            lstm.setBatch(learningRate, x, y)
+            lstm.train()
+            tickerLosses.append(lstm.getBatchLoss())
+            #print(lstm.getBatchPredictions()[-1][-1][-1], lstm.getBatchLabels()[-1][-1][-1])
+        lstm.resetState()
+        loss = sum(tickerLosses) / len(tickerLosses)
+        print(count, "/", dw.numSlices)
+        print("LR:\t", learningRate)
+        print("Loss:\t", loss)
+        print("")
+        #learningRate = decayLearningRate(learningRate, loss)
+        count += 1
+    learningRate = next(LRs)
 
 #################################
 # TESTING
 #################################
 
-# Plot trained data
-pointer = 0
 actual = []
-train = []
-trainLosses = []
-while (pointer + Constants.sequenceLength) < DataWorker.trainingDays:
-    x = [DataWorker.x[pointer:(pointer + Constants.sequenceLength)]]
-    y = [DataWorker.y[(pointer + 1):(pointer + Constants.sequenceLength + 1)]]
-    lstm.setBatch(0, x, y)
-    label = DataWorker.denormalise(lstm.getBatchLabels()[-1][-1])
-    prediction = DataWorker.denormalise(lstm.getBatchPredictions()[-1][-1])
-    actual.append(label)
-    train.append(prediction)
-    trainLosses.append(lstm.getBatchLoss())
-    pointer += 1
-
-# Plot unseen testing data
 test = []
+testProjections = []
 testLosses = []
-while (pointer + Constants.sequenceLength) < DataWorker.totalDays:
-    x = [DataWorker.x[pointer:(pointer + Constants.sequenceLength)]]
-    y = [DataWorker.y[(pointer + 1):(pointer + Constants.sequenceLength + 1)]]
+tickerPointer = len(dw.tickers) - 1
+dayPointer = -1
+lastLabel = None
+count = 0
+while dayPointer != 0:
+    dayPointer = max(dayPointer, 0)
+    x, y, _, dayPointer = dw.getBatch(tickerPointer, dayPointer, False)
     lstm.setBatch(0, x, y)
-    label = DataWorker.denormalise(lstm.getBatchLabels()[-1][-1])
-    prediction = DataWorker.denormalise(lstm.getBatchPredictions()[-1][-1])
+    lstm.train()
+    testLosses.append(lstm.getBatchLoss())
+    label = lstm.getBatchLabels()[-1][-1][-1]
+    prediction = lstm.getBatchPredictions()[-1][-1][-1]
     actual.append(label)
     test.append(prediction)
-    testLosses.append(lstm.getBatchLoss())
-    pointer += 1
+    if lastLabel is not None:
+        testProjections.append([[count, count + 1], [lastLabel, prediction]])
+        count += 1
+    lastLabel = label
+loss = sum(testLosses) / len(testLosses)
+print("Testing Loss:\t", loss)
 
-print("Seen Data Loss:  \t", sum(trainLosses) / len(trainLosses))
-print("Unseen Data Loss:\t", sum(testLosses) / len(testLosses))
-
-plt.plot(actual, label="Actual")
-plt.plot(train, label="Training")
-plt.plot([x for x in range(
-    DataWorker.trainingDays - Constants.sequenceLength,
-    DataWorker.totalDays - Constants.sequenceLength)],
-    test,
-    label="Testing")
-plt.legend()
+plt.plot(actual)
+# for t in testProjections:
+#     plt.plot(t[0], t[1], c='r')
+plt.plot(test)
 plt.show()

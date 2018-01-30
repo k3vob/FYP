@@ -1,7 +1,14 @@
-- Test difference in features created (moving average & percent change)
-- plot last actual to current prediction
-- Dropout
 - Normalise tickers collectivley or individually?
+- Normalise everything to [0, 1]? (pct_change, etc.)
+- Cyclical learning rate vs (if loss < learningRate * 10) vs (if loss < learningRate)
+- Predict up/down vs actual price vs ma
+    - [1, 1, 0, 0] vs [1, 0, 0, 0]
+- Presentation simulation
+- Overfits time period - poor on future period
+- TensorFlow bug?
+- Optimal dropout
+- Optimal batchSize
+- Test difference in features created (moving average & percent change)
 - Predict more than 1 day (use predictions for further predicting)
 
 vision.ucd.ie

@@ -1,6 +1,7 @@
 import datetime as dt
 import math
 import pickle as pk
+import random
 
 import bs4 as bs
 import numpy as np
@@ -47,12 +48,13 @@ endDate = tradingDays[-1]
 # # Get S&P 500 index prices
 # ################################################################################
 #
+# # Get SP500 Index adjusted closing price and change col name
 # av = TimeSeries(key=av_api_key, output_format='pandas')
 # sp500, _ = av.get_daily_adjusted(symbol='^GSPC', outputsize='full')
 # sp500 = sp500['5. adjusted close'].to_frame()
 # sp500.columns = ['sp500_adj_close']
 #
-# # Reduce to trading days
+# # Reduce to timeframe to trading days
 # sp500 = sp500.loc[str(startDate):str(endDate)]
 # sp500.drop([str(missingDay)], inplace=True)
 #
@@ -66,26 +68,14 @@ endDate = tradingDays[-1]
 #
 # sp500.set_index([dates], inplace=True)
 #
-# # Percent change of closing price from one day to the next
-# sp500['sp500_change'] = sp500['sp500_adj_close'].pct_change()
-#
-# # Moving average of sequence length window
-# sp500['sp500_moving_avg'] = sp500['sp500_adj_close'].rolling(
-#     window=Constants.sequenceLength).mean()
+# for ma in Constants.movingAverages:
+#     sp500['sp500_{}_ma'.format(ma)] = sp500['sp500_adj_close'].rolling(ma).mean()
 #
 # # Remove all rows with nulls
 # sp500.dropna(inplace=True)
 #
-# # Move label to last column
-# adj_close = sp500['sp500_adj_close']
-# sp500.drop(labels=['sp500_adj_close'], axis=1, inplace=True)
-# sp500 = pd.concat([sp500, adj_close], axis=1)
-#
-# # Normalise tp [0, 1]
-# sp500 = (sp500 - sp500.min()) / (sp500.max() - sp500.min())
-#
 # ################################################################################
-# # Get all tickers
+# # Get daily prices for all S&P 500 companies
 # ################################################################################
 #
 # startTickers = quandl.get_table(
@@ -94,12 +84,13 @@ endDate = tradingDays[-1]
 #     paginate=True
 # )['ticker'].as_matrix()
 #
-# dfs = []
-# tickers = []
+# dfs = []        # List of DFs for all S&P 500 companies used
+# tickers = []    # List of tickers for all S&P 500 companies used
 #
 # for i, t in enumerate(startTickers):
 #     print(i, "/", len(startTickers))
 #
+#     # if not S&P 500 company, skip
 #     if t not in sp500_tickers:
 #         continue
 #
@@ -111,9 +102,11 @@ endDate = tradingDays[-1]
 #         paginate=True
 #     )
 #
+#     # If any days missing, skip
 #     if df.shape[0] != len(tradingDays):
 #         continue
 #
+#     # Data will be stored for this ticker
 #     tickers.append(t)
 #
 #     # Change date to YYYY-MM-DD
@@ -124,73 +117,118 @@ endDate = tradingDays[-1]
 #     df.drop(['ticker', 'open', 'high', 'low', 'close', 'ex-dividend',
 #              'volume', 'split_ratio'], axis=1, inplace=True)
 #
-#     # Percent change of closing price from one day to the next
-#     df['change'] = df['adj_close'].pct_change()
-#
-#     # Moving average of sequence length window
-#     df['moving_avg'] = df['adj_close'].rolling(
-#         window=Constants.sequenceLength).mean()
+#     # Construct moving averages of closing price
+#     for ma in Constants.movingAverages:
+#         df['{}_ma'.format(ma)] = df['adj_close'].rolling(ma).mean()
 #
 #     # Remove all rows with nulls
 #     df.dropna(inplace=True)
 #
-#     # ### Normalise individually
-#     df = (df - df.min()) / (df.max() - df.min())
-#
-#     # Concat sp500
+#     # Concat sp500 data on to each ticker's data
 #     df = pd.concat([df, sp500], axis=1)
-#
-#     # Move label to last column
-#     adj_close = df['adj_close']
-#     df.drop(labels=['adj_close'], axis=1, inplace=True)
-#     df = pd.concat([df, adj_close], axis=1)
 #
 #     dfs.append(df)
 #
+# # Concat DFs for all tickers into one
+# # 2 layers of indices (1. ticker, 2. data)
 # df = pd.concat(dfs, keys=tickers, names=['ticker'])
 #
-# # ### Normalise collectively
-# # df = (df - df.min()) / (df.max() - df.min())
+# # Normalise collectively
+# normalisedDF = (df - df.min()) / (df.max() - df.min())
 #
-# pk.dump(df, open(dir + "5YearDF.p", "wb"))
+# # Daily percentage change of closing price and S&P 500 closing price
+# df['sp500_pct_change'] = df['sp500_adj_close'].pct_change()
+# df['pct_change'] = df['adj_close'].pct_change()
+#
+# # Copy un-normalised percentage changes into normalisedDF
+# normalisedDF['sp500_pct_change'] = df['sp500_pct_change']
+# normalisedDF['pct_change'] = df['pct_change']
+#
+# # Drop 1st row of each ticker (pct_change is from last ticker)
+# idx = [df.xs(t, drop_level=False).index[0] for t in tickers]
+# df = df.drop(idx)
+# normalisedDF = normalisedDF.drop(idx)
+#
+# # Get max and min values for denormalisation
+# minDF = df.min()
+# maxDF = df.max()
+#
+# # 1 if True, 0 if False
+# # Down -3%+
+# normalisedDF['label_down3'] = (df['pct_change'] <= -Constants.returnTarget).astype(float)
+# # Down 0% -> -3%
+# normalisedDF['label_down'] = ((df['pct_change'] < 0) &
+#                               (df['pct_change'] > -Constants.returnTarget)).astype(float)
+# # Up 0% -> 3%
+# normalisedDF['label_up'] = ((df['pct_change'] >= 0) &
+#                             (df['pct_change'] < Constants.returnTarget)).astype(float)
+# # Up 3%+
+# normalisedDF['label_up3'] = (df['pct_change'] >= Constants.returnTarget).astype(float)
+#
+# # Store as label as one-hot list
+# # normalisedDF['label'] = (df[['down3', 'down', 'up', 'up3']].values[:, :, None]).tolist()
+#
+# pk.dump(normalisedDF, open(dir + "5YearData.p", "wb"))
+# pk.dump(minDF, open(dir + "min5YearData.p", "wb"))
+# pk.dump(maxDF, open(dir + "max5YearData.p", "wb"))
 # pk.dump(tickers, open(dir + "5YearTickers.p", "wb"))
+#
+# print("Stored {} year data for {} companies".format(Constants.years, len(tickers)))
 
 ################################################################################
 # Load data & create batches
 ################################################################################
 
-df = pk.load(open(dir + "5YearDF.p", "rb"))
+df = pk.load(open(dir + "5YearData.p", "rb"))
+minDF = pk.load(open(dir + "min5YearData.p", "rb"))
+maxDF = pk.load(open(dir + "max5YearData.p", "rb"))
 tickers = pk.load(open(dir + "5YearTickers.p", "rb"))
+testingTicker = random.choice(tickers)
 
 numDays = df.loc[tickers[0]].shape[0]
-numFeatures = df.shape[1] - 1
-numTickerGroups = math.ceil(len(tickers) / Constants.batchSize)
+numTrainingDays = int(numDays * Constants.trainingPercentage)
+numFeatures = df.shape[1] - Constants.numLabels
+numSlices = math.ceil(len(tickers) / Constants.batchSize)
 
 
-def getBatch(tickerPointer, dayPointer, isTraining=True):
+def getBatch(dayPointer, tickerPointer=0, isTesting=True):
     batchX, batchY = [], []
     batchSize = 1
-    if isTraining:
+    if not isTesting:
         batchSize = min(
             Constants.batchSize,
             len(tickers) - tickerPointer - 1
         )   # - 1 -> Last ticker for testing
+
     for i in range(batchSize):
         ticker = tickers[tickerPointer + i]
-        x = df.loc[ticker].iloc[dayPointer:dayPointer + Constants.sequenceLength, :-1].as_matrix()
-        y = df.loc[ticker].iloc[dayPointer + 1: dayPointer +
-                                Constants.sequenceLength + 1, -1].as_matrix()
-        y = y.reshape(y.shape[0], 1)
+        if not isTesting and ticker == testingTicker:
+            continue
+        if isTesting:
+            ticker = testingTicker
+
+        x = df.loc[ticker].iloc[
+            dayPointer:dayPointer + Constants.sequenceLength,
+            :-Constants.numLabels
+        ].as_matrix()
+
+        y = df.loc[ticker].iloc[
+            dayPointer + 1: dayPointer + Constants.sequenceLength + 1,
+            -Constants.numLabels:
+        ].as_matrix()
+
+        # y = y.reshape(y.shape[0], 4)
         batchX.append(x)
         batchY.append(y)
 
-    if isTraining:
+    if not isTesting:
         dayPointer += Constants.sequenceLength
+        if dayPointer + Constants.sequenceLength + 1 >= numTrainingDays:
+            dayPointer = 0      # + 1 -> y is shifted by 1
     else:
         dayPointer += 1
-
-    if dayPointer + Constants.sequenceLength + 1 >= numDays:
-        dayPointer = 0      # + 1 -> y is shifted by 1
+        if dayPointer + Constants.sequenceLength + 1 >= numDays:
+            dayPointer = 0      # + 1 -> y is shifted by 1
 
     if dayPointer == 0:
         if batchSize < Constants.batchSize:
@@ -198,4 +236,4 @@ def getBatch(tickerPointer, dayPointer, isTraining=True):
         else:
             tickerPointer += Constants.batchSize
 
-    return batchX, batchY, tickerPointer, dayPointer
+    return np.array(batchX), np.array(batchY), tickerPointer, dayPointer
