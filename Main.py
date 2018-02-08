@@ -1,10 +1,8 @@
-import os
-from itertools import cycle
-
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sb
 
+import BatchGenerator as bg
 import Constants
 import DataWorker as dw
 from Model import LSTM
@@ -14,24 +12,11 @@ from Model import LSTM
 
 lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=Constants.numLabels)
 
-
-def decayLearningRate(learningRate, loss):
-    # 0.01 -> 0.001 -> 0.0001 -> ...
-    if loss < learningRate:  # * 10:
-        learningRate /= 10
-    return learningRate
-
-
-# learningRate = Constants.seedLearningRate
-learningRate = 0.0001
-
 #################################
 # TRAINING
 #################################
 
 for epoch in range(Constants.numEpochs):
-    # if epoch == 1:
-    #    learningRate = Constants.initialLearningRate
     print("***** EPOCH:", epoch + 1, "*****\n")
     tickerPointer = -1
     count = 1
@@ -42,8 +27,8 @@ for epoch in range(Constants.numEpochs):
         dayPointer = -1
         while dayPointer != 0:
             dayPointer = max(dayPointer, 0)
-            x, y, tickerPointer, dayPointer = dw.getBatch(dayPointer, tickerPointer, False)
-            lstm.setBatch(learningRate, x, y)
+            x, y, tickerPointer, dayPointer = bg.getTrainingBatch(tickerPointer, dayPointer)
+            lstm.setBatch(x, y)
             lstm.train()
             batchLoss, batchAccuracy = lstm.get(['loss', 'accuracy'])
             sliceLosses.append(batchLoss)
@@ -52,67 +37,101 @@ for epoch in range(Constants.numEpochs):
         loss = sum(sliceLosses) / len(sliceLosses)
         accuracy = sum(sliceAccuracies) / len(sliceAccuracies)
         print(count, "/", dw.numSlices)
-        print("LR:\t\t", learningRate)
         print("Loss:\t\t", loss)
         print("Accuracy:\t", "%.2f" % (accuracy * 100) + "%")
         print("")
-        # learningRate = decayLearningRate(learningRate, loss)
         count += 1
 
 #################################
 # TESTING
 #################################
 
+print("***** TESTING *****\n")
+
 sb.set()
 sb.set_style("dark")
 
-prices = dw.df.loc[dw.testingTicker]['adj_close']
-dates = prices.index
+fig = plt.figure()
+ax1 = fig.add_subplot(211)
+ax2 = fig.add_subplot(212)
 
-plt.plot([dates[dw.numTrainingDays],
-          dates[dw.numTrainingDays]],
-         [prices.min(), prices.max()],
-         c='gray')
+for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
+    prices = dw.SP500Prices.loc[ticker]['adj_close']
+    denormalisedPrices = []
+    for price in prices:
+        denormalisedPrices.append(
+            dw.denormalise(price, dw.minPrice, dw.maxPrice)
+        )
+    dates = prices.index
 
-plt.plot(dates, prices)
+    seenLosses, unseenLosses, seenAccuracies, unseenAccuracies = [], [], [], []
+    dayPointer = -1
+    while dayPointer != 0:
+        dayPointer = max(dayPointer, 0)
+        x, y, dayPointer = bg.getTestingBatch(ticker, dayPointer)
+        lstm.setBatch(x, y)
+        batchLoss, batchAccuracy, batchPredictions = lstm.get(['loss', 'accuracy', 'predictions'])
+        if dayPointer + Constants.sequenceLength < dw.numTrainingDays:
+            seenLosses.append(batchLoss)
+            seenAccuracies.append(batchAccuracy)
+        else:
+            unseenLosses.append(batchLoss)
+            unseenAccuracies.append(batchAccuracy)
 
-seenLosses, unseenLosses, seenAccuracies, unseenAccuracies = [], [], [], []
-dayPointer = -1
-while dayPointer != 0:
-    dayPointer = max(dayPointer, 0)
-    x, y, _, dayPointer = dw.getBatch(dayPointer)
-    lstm.setBatch(0, x, y)
-    batchLoss, batchAccuracy, batchPredictions = lstm.get(['loss', 'accuracy', 'predictions'])
-    if dayPointer + Constants.sequenceLength < dw.numTrainingDays:
-        seenLosses.append(batchLoss)
-        seenAccuracies.append(batchAccuracy)
+        prediction = np.argmax(batchPredictions[-1][-1])
+
+        if prediction == 0:
+            if i == 0:
+                ax1.scatter(dates[dayPointer + Constants.sequenceLength],
+                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='r')
+            else:
+                ax2.scatter(dates[dayPointer + Constants.sequenceLength],
+                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='r')
+        if prediction == 1:
+            if i == 0:
+                ax1.scatter(dates[dayPointer + Constants.sequenceLength],
+                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='g',)
+            else:
+                ax2.scatter(dates[dayPointer + Constants.sequenceLength],
+                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='g',)
+
+    seenLoss = sum(seenLosses) / len(seenLosses)
+    seenAccuracy = sum(seenAccuracies) / len(seenAccuracies)
+    unseenLoss = sum(unseenLosses) / len(unseenLosses)
+    unseenAccuracy = sum(unseenAccuracies) / len(unseenAccuracies)
+
+    if i == 0:
+        ax1.plot([dates[dw.numTrainingDays],
+                  dates[dw.numTrainingDays]],
+                 [min(denormalisedPrices),
+                  max(denormalisedPrices)],
+                 c='gray')
+
+        ax1.plot(dates, denormalisedPrices)
+        ax1.set_title(ticker + " (Seen Ticker - Training Dates: {}%, Future Dates: {}%)".format(
+            "%.2f" % (seenAccuracy * 100),
+            "%.2f" % (unseenAccuracy * 100))
+        )
+        print("SEEN TICKER")
+
     else:
-        unseenLosses.append(batchLoss)
-        unseenAccuracies.append(batchAccuracy)
+        ax2.plot([dates[dw.numTrainingDays],
+                  dates[dw.numTrainingDays]],
+                 [min(denormalisedPrices),
+                  max(denormalisedPrices)],
+                 c='gray')
 
-    prediction = np.argmax(batchPredictions[-1][-1])
+        ax2.plot(dates, denormalisedPrices)
+        ax2.set_title(ticker + " (Unseen Ticker - Training Dates: {}%, Future Dates: {}%)".format(
+            "%.2f" % (seenAccuracy * 100),
+            "%.2f" % (unseenAccuracy * 100))
+        )
+        print("UNSEEN TICKER")
 
-    if prediction == 0:
-        plt.scatter(dates[dayPointer + Constants.sequenceLength],
-                    prices[dayPointer + Constants.sequenceLength], c='r', marker='v')
-    if prediction == 1:
-        plt.scatter(dates[dayPointer + Constants.sequenceLength],
-                    prices[dayPointer + Constants.sequenceLength], c='r',)
-    if prediction == 2:
-        plt.scatter(dates[dayPointer + Constants.sequenceLength],
-                    prices[dayPointer + Constants.sequenceLength], c='g')
-    if prediction == 3:
-        plt.scatter(dates[dayPointer + Constants.sequenceLength],
-                    prices[dayPointer + Constants.sequenceLength], c='g', marker='^')
+    print("Seen Loss:\t", seenLoss)
+    print("Seen Accuracy:\t", "%.2f" % (seenAccuracy * 100) + "%")
+    print("Unseen Loss:\t", unseenLoss)
+    print("Unseen Accuracy:", "%.2f" % (unseenAccuracy * 100) + "%\n")
 
-seenLoss = sum(seenLosses) / len(seenLosses)
-seenAccuracy = sum(seenAccuracies) / len(seenAccuracies)
-unseenLoss = sum(unseenLosses) / len(unseenLosses)
-unseenAccuracy = sum(unseenAccuracies) / len(unseenAccuracies)
-print("Seen Loss:\t", seenLoss)
-print("Seen Accuracy:\t", "%.2f" % (seenAccuracy * 100) + "%")
-print("Unseen Loss:\t", unseenLoss)
-print("Unseen Accuracy:", "%.2f" % (unseenAccuracy * 100) + "%")
-
-plt.title(dw.testingTicker)
+plt.tight_layout()
 plt.show()

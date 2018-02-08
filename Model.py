@@ -19,7 +19,6 @@ class LSTM():
         # Batch Placeholders
         #####################################################
 
-        self.learningRate = tf.placeholder(tf.float32, [])
         self.batchSize = tf.placeholder(tf.int32, [])
         self.inputs = tf.placeholder(
             tf.float32, [None, sequenceLength, numFeatures]
@@ -53,8 +52,7 @@ class LSTM():
         # TensorFlow Graph Operations
         #####################################################
 
-        self.gradientDescentOptimiser = tf.train.AdamOptimizer(
-            self.learningRate)
+        self.gradientDescentOptimiser = tf.train.AdamOptimizer(Constants.learningRate)
 
         self.state = None
         self.batchDict = None
@@ -105,17 +103,17 @@ class LSTM():
 
     def __calculateLoss(self):
         """Calculates batch loss between predictions and labels."""
-        # loss = tf.reduce_mean(
-        #     tf.nn.sigmoid_cross_entropy_with_logits(
-        #         labels=self.labelsUnrolled, logits=self.outputs
-        #     )
-        # )
-        # return loss
-
-        loss = tf.losses.mean_squared_error(
-            labels=self.labelsUnrolled, predictions=self.predictions
+        loss = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits_v2(
+                labels=self.labelsUnrolled, logits=self.outputs
+            )
         )
-        return tf.sqrt(loss)    # RMSE
+        return loss
+
+        # loss = tf.losses.mean_squared_error(
+        #     labels=self.labelsUnrolled, predictions=self.predictions
+        # )
+        # return tf.sqrt(loss)    # RMSE
 
     def __calculateAccuracy(self):
         """Calculates batch accuracy of predictions against labels."""
@@ -128,10 +126,9 @@ class LSTM():
         """Resets memory state of LSTM."""
         self.state = self.network.zero_state(self.batchSize, tf.float32)
 
-    def setBatch(self, learningRate, inputs, labels):
+    def setBatch(self, inputs, labels):
         """Sets TensorFlow Session's 'feed_dict' before each batch."""
         self.batchDict = {
-            self.learningRate: learningRate,
             self.batchSize: len(inputs),
             self.inputs: inputs,
             self.labels: labels

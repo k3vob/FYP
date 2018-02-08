@@ -1,27 +1,46 @@
 import os
 
-# Current dir
-wd = os.path.dirname(os.path.realpath(__file__))
-dataDir = wd + '/Data/'
-defaultFile = dataDir + 'train.h5'
-
-
 # LSTM Architecture
 sequenceLength = 25
 batchSize = 50
-numEpochs = 600
+numEpochs = 100
 numLayers = 5
 numHidden = 150
 
 # LSTM Hyperparameters
-seedLearningRate = 0.001   # Needed to avoid predicting all 0.0
-initialLearningRate = 0.0001
+learningRate = 0.0001
 forgetBias = 1.0
-dropoutRate = 0.0
+dropoutRate = 0.25
 
 # Data
-numLabels = 4
+projectDir = os.path.dirname(os.path.realpath(__file__))
+dataDir = projectDir + '/Data/'
 years = 5
 movingAverages = [5, 15, 30, 90]
-returnTarget = 0.03
 trainingPercentage = 0.8
+numLabels = 2
+
+alphaVantageKey = 'XIZOWSOCZRYV23XJ'
+quandlKey = 'AysSyMCk5fZSBkHA-8_i'
+# quandlKey = 'Y69LxsDnPJh1FcyYM39s'
+
+# Can't match ticker with Knowsis ID
+hardcodedTickers = {
+    'HPQ': 'hewlettpackardcompany',
+    'GOOGL': 'googleinc',
+    'BLK': 'blackrockinc',
+    'HRB': 'hrblockinc',
+    'IFF': 'internationalflavorsfragrancesinc',
+    'LLY': 'elilillyandco',
+    'RL': 'ralphlaurencorp'
+}
+
+# Not in Knowsis data
+ignoredTickers = [
+    'ARNC',
+    'GGP',
+    'WEC',
+    'HCN',
+    'AVGO',
+    'DISCK'
+]
