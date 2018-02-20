@@ -10,11 +10,23 @@ from Model import LSTM
 # Disbale GPU
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=Constants.numLabels)
+
+def decayLearningRate(learningRate, accuracy, threshold, thresholdChange):
+    if accuracy > threshold and thresholdChange != 0.0:
+        learningRate /= 10
+        threshold += thresholdChange
+        # thresholdChange -= 0.01
+    return learningRate, threshold, thresholdChange
+
 
 #################################
 # TRAINING
 #################################
+
+lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=Constants.numLabels)
+learningRate = Constants.learningRate
+threshold = 0.77
+thresholdChange = 0.02
 
 for epoch in range(Constants.numEpochs):
     print("***** EPOCH:", epoch + 1, "*****\n")
@@ -28,7 +40,7 @@ for epoch in range(Constants.numEpochs):
         while dayPointer != 0:
             dayPointer = max(dayPointer, 0)
             x, y, tickerPointer, dayPointer = bg.getTrainingBatch(tickerPointer, dayPointer)
-            lstm.setBatch(x, y)
+            lstm.setBatch(x, y, learningRate)
             lstm.train()
             batchLoss, batchAccuracy = lstm.get(['loss', 'accuracy'])
             sliceLosses.append(batchLoss)
@@ -36,9 +48,12 @@ for epoch in range(Constants.numEpochs):
         lstm.resetState()
         loss = sum(sliceLosses) / len(sliceLosses)
         accuracy = sum(sliceAccuracies) / len(sliceAccuracies)
-        print(count, "/", dw.numSlices)
+        learningRate, threshold, thresholdChange = decayLearningRate(
+            learningRate, accuracy, threshold, thresholdChange)
+        print(epoch + 1, ":", count, "/", dw.numSlices)
         print("Loss:\t\t", loss)
         print("Accuracy:\t", "%.2f" % (accuracy * 100) + "%")
+        print("Learning Rate:\t", learningRate)
         print("")
         count += 1
 
@@ -56,7 +71,7 @@ ax1 = fig.add_subplot(211)
 ax2 = fig.add_subplot(212)
 
 for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
-    prices = dw.SP500Prices.loc[ticker]['adj_close']
+    prices = dw.data.loc[ticker]['adj_close']
     denormalisedPrices = []
     for price in prices:
         denormalisedPrices.append(
@@ -69,9 +84,10 @@ for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
     while dayPointer != 0:
         dayPointer = max(dayPointer, 0)
         x, y, dayPointer = bg.getTestingBatch(ticker, dayPointer)
-        lstm.setBatch(x, y)
-        batchLoss, batchAccuracy, batchPredictions = lstm.get(['loss', 'accuracy', 'predictions'])
-        if dayPointer + Constants.sequenceLength < dw.numTrainingDays:
+        lstm.setBatch(x, y, 0)
+        batchLoss, batchAccuracy, batchPredictions = lstm.get(
+            ['loss', 'accuracy', 'predictions'])
+        if dayPointer + Constants.sequenceLength < dw.numTrainingDates:
             seenLosses.append(batchLoss)
             seenAccuracies.append(batchAccuracy)
         else:
@@ -101,8 +117,8 @@ for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
     unseenAccuracy = sum(unseenAccuracies) / len(unseenAccuracies)
 
     if i == 0:
-        ax1.plot([dates[dw.numTrainingDays],
-                  dates[dw.numTrainingDays]],
+        ax1.plot([dates[dw.numTrainingDates],
+                  dates[dw.numTrainingDates]],
                  [min(denormalisedPrices),
                   max(denormalisedPrices)],
                  c='gray')
@@ -115,8 +131,8 @@ for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
         print("SEEN TICKER")
 
     else:
-        ax2.plot([dates[dw.numTrainingDays],
-                  dates[dw.numTrainingDays]],
+        ax2.plot([dates[dw.numTrainingDates],
+                  dates[dw.numTrainingDates]],
                  [min(denormalisedPrices),
                   max(denormalisedPrices)],
                  c='gray')

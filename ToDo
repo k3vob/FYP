@@ -1,3 +1,9 @@
+* Test acc/loss of:
+    - Prices alone
+    - Prices + technicals
+    - Prices + sentiment
+    - Prices + technicals + sentiment
+
 - Normalise tickers collectivley or individually?
 - Normalise everything to [0, 1]? (pct_change, etc.)
 - Cyclical learning rate vs (if loss < learningRate * 10) vs (if loss < learningRate)

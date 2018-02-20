@@ -1,32 +1,31 @@
 import random
 
 import Constants
-import DataWorker
+import DataWorker as dw
 
-data = DataWorker.SP500Prices
-tickers = DataWorker.SP500Tickers
-unseenTestingTicker = random.choice(tickers)
-tickers.remove(unseenTestingTicker)
+# unseenTestingTicker = 'GOOGL'
+unseenTestingTicker = random.choice(dw.tickers)
+dw.tickers.remove(unseenTestingTicker)
 seenTestingTicker = unseenTestingTicker
 while seenTestingTicker == unseenTestingTicker:
-    seenTestingTicker = random.choice(tickers)
+    seenTestingTicker = random.choice(dw.tickers)
 
 
 def getTrainingBatch(tickerPointer, dayPointer):
     batchX, batchY = [], []
     batchSize = min(
         Constants.batchSize,
-        len(tickers) - tickerPointer - 1
+        len(dw.tickers) - tickerPointer - 1
     )   # - 1 -> Last ticker for testing
 
     for i in range(batchSize):
-        ticker = tickers[tickerPointer + i]
-        x = data.loc[ticker].iloc[
+        ticker = dw.tickers[tickerPointer + i]
+        x = dw.data.loc[ticker].iloc[
             dayPointer: dayPointer + Constants.sequenceLength,
             :-Constants.numLabels
         ].as_matrix()
 
-        y = data.loc[ticker].iloc[
+        y = dw.data.loc[ticker].iloc[
             dayPointer + 1: dayPointer + Constants.sequenceLength + 1,
             -Constants.numLabels:
         ].as_matrix()
@@ -36,7 +35,7 @@ def getTrainingBatch(tickerPointer, dayPointer):
         batchY.append(y)
 
     dayPointer += Constants.sequenceLength
-    if dayPointer + Constants.sequenceLength + 1 >= DataWorker.numTrainingDays:
+    if dayPointer + Constants.sequenceLength + 1 >= dw.numTrainingDates:
         dayPointer = 0      # + 1 -> y is shifted by 1
 
     if dayPointer == 0:
@@ -51,12 +50,12 @@ def getTrainingBatch(tickerPointer, dayPointer):
 def getTestingBatch(ticker, dayPointer):
     batchX, batchY = [], []
 
-    x = data.loc[ticker].iloc[
+    x = dw.data.loc[ticker].iloc[
         dayPointer:dayPointer + Constants.sequenceLength,
         :-Constants.numLabels
     ].as_matrix()
 
-    y = data.loc[ticker].iloc[
+    y = dw.data.loc[ticker].iloc[
         dayPointer + 1: dayPointer + Constants.sequenceLength + 1,
         -Constants.numLabels:
     ].as_matrix()
@@ -66,7 +65,7 @@ def getTestingBatch(ticker, dayPointer):
     batchY.append(y)
 
     dayPointer += 1
-    if dayPointer + Constants.sequenceLength + 1 >= DataWorker.numDays:
+    if dayPointer + Constants.sequenceLength + 1 >= dw.numTotalDates:
         dayPointer = 0      # + 1 -> y is shifted by 1
 
     return batchX, batchY, dayPointer

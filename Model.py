@@ -18,8 +18,9 @@ class LSTM():
         #####################################################
         # Batch Placeholders
         #####################################################
-
         self.batchSize = tf.placeholder(tf.int32, [])
+        self.learningRate = tf.placeholder(tf.float32, [])
+        # self.learningRate = Constants.learningRate
         self.inputs = tf.placeholder(
             tf.float32, [None, sequenceLength, numFeatures]
         )
@@ -52,7 +53,7 @@ class LSTM():
         # TensorFlow Graph Operations
         #####################################################
 
-        self.gradientDescentOptimiser = tf.train.AdamOptimizer(Constants.learningRate)
+        self.gradientDescentOptimiser = tf.train.AdamOptimizer(self.learningRate)
 
         self.state = None
         self.batchDict = None
@@ -86,10 +87,11 @@ class LSTM():
             initial_state=self.state,
             dtype=tf.float32
         )
-        self.outputs = [
-            tf.add(tf.matmul(output, self.weights), self.biases)
-            for output in self.outputs
-        ]
+        # self.outputs = [
+        #     tf.add(tf.matmul(output, self.weights), self.biases)
+        #     for output in self.outputs
+        # ]
+        self.outputs = tf.add(tf.matmul(self.outputs[-1], self.weights), self.biases)   # #####################
         self.predictions = self.__activateOutputs()
         self.loss = self.__calculateLoss()
         self.accuracy = self.__calculateAccuracy()
@@ -98,14 +100,14 @@ class LSTM():
     def __activateOutputs(self):
         """Applies activation function to all ouputs of the network."""
         predictions = tf.nn.softmax(self.outputs)
-        predictions = tf.unstack(predictions, axis=0)
+        #predictions = tf.unstack(predictions, axis=0)                              # ######################
         return predictions
 
     def __calculateLoss(self):
-        """Calculates batch loss between predictions and labels."""
+        """Calculates batch loss between predictions and labels."""                 # ######################
         loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits_v2(
-                labels=self.labelsUnrolled, logits=self.outputs
+                labels=self.labelsUnrolled[-1], logits=self.outputs
             )
         )
         return loss
@@ -117,8 +119,8 @@ class LSTM():
 
     def __calculateAccuracy(self):
         """Calculates batch accuracy of predictions against labels."""
-        correctPredictions = tf.equal(tf.argmax(self.predictions, axis=2),
-                                      tf.argmax(self.labelsUnrolled, axis=2))
+        correctPredictions = tf.equal(tf.argmax(self.predictions, axis=-1),
+                                      tf.argmax(self.labelsUnrolled[-1], axis=-1))   # ##################
         accuracy = tf.reduce_mean(tf.cast(correctPredictions, tf.float32))
         return accuracy
 
@@ -126,12 +128,13 @@ class LSTM():
         """Resets memory state of LSTM."""
         self.state = self.network.zero_state(self.batchSize, tf.float32)
 
-    def setBatch(self, inputs, labels):
+    def setBatch(self, inputs, labels, learningRate):
         """Sets TensorFlow Session's 'feed_dict' before each batch."""
         self.batchDict = {
             self.batchSize: len(inputs),
             self.inputs: inputs,
-            self.labels: labels
+            self.labels: labels,
+            self.learningRate: learningRate
         }
 
     def train(self):
