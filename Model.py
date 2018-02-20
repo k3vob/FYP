@@ -87,11 +87,10 @@ class LSTM():
             initial_state=self.state,
             dtype=tf.float32
         )
-        # self.outputs = [
-        #     tf.add(tf.matmul(output, self.weights), self.biases)
-        #     for output in self.outputs
-        # ]
-        self.outputs = tf.add(tf.matmul(self.outputs[-1], self.weights), self.biases)   # #####################
+        self.outputs = [
+            tf.add(tf.matmul(output, self.weights), self.biases)
+            for output in self.outputs
+        ]
         self.predictions = self.__activateOutputs()
         self.loss = self.__calculateLoss()
         self.accuracy = self.__calculateAccuracy()
@@ -100,14 +99,14 @@ class LSTM():
     def __activateOutputs(self):
         """Applies activation function to all ouputs of the network."""
         predictions = tf.nn.softmax(self.outputs)
-        #predictions = tf.unstack(predictions, axis=0)                              # ######################
+        predictions = tf.unstack(predictions, axis=0)
         return predictions
 
     def __calculateLoss(self):
-        """Calculates batch loss between predictions and labels."""                 # ######################
+        """Calculates batch loss between predictions and labels."""
         loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits_v2(
-                labels=self.labelsUnrolled[-1], logits=self.outputs
+                labels=self.labelsUnrolled, logits=self.outputs
             )
         )
         return loss
@@ -120,7 +119,7 @@ class LSTM():
     def __calculateAccuracy(self):
         """Calculates batch accuracy of predictions against labels."""
         correctPredictions = tf.equal(tf.argmax(self.predictions, axis=-1),
-                                      tf.argmax(self.labelsUnrolled[-1], axis=-1))   # ##################
+                                      tf.argmax(self.labelsUnrolled, axis=-1))
         accuracy = tf.reduce_mean(tf.cast(correctPredictions, tf.float32))
         return accuracy
 
