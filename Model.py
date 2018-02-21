@@ -12,7 +12,6 @@ class LSTM():
             sequenceLength=Constants.sequenceLength,
             numLayers=Constants.numLayers,
             numUnits=Constants.numHidden,  # LSTM units per cell per time step
-            dropout=Constants.dropoutRate
     ):
 
         #####################################################
@@ -20,7 +19,7 @@ class LSTM():
         #####################################################
         self.batchSize = tf.placeholder(tf.int32, [])
         self.learningRate = tf.placeholder(tf.float32, [])
-        # self.learningRate = Constants.learningRate
+        self.dropoutRate = tf.placeholder(tf.float32, [])
         self.inputs = tf.placeholder(
             tf.float32, [None, sequenceLength, numFeatures]
         )
@@ -46,7 +45,7 @@ class LSTM():
         #####################################################
 
         self.network = self.__buildStackedLayers(
-            numUnits, numLayers, dropout
+            numUnits, numLayers, self.dropoutRate
         )
 
         #####################################################
@@ -62,8 +61,9 @@ class LSTM():
         self.loss = None
         self.accuracy = None
         self.lossMinimiser = None
-        self.session = tf.Session()
         self.__buildTensorFlowGraph()
+        self.session = tf.Session()
+        self.saver = tf.train.Saver()
         self.session.run(tf.global_variables_initializer())
 
     def __buildStackedLayers(self, numUnits, numLayers, dropout):
@@ -127,13 +127,14 @@ class LSTM():
         """Resets memory state of LSTM."""
         self.state = self.network.zero_state(self.batchSize, tf.float32)
 
-    def setBatch(self, inputs, labels, learningRate):
+    def setBatch(self, inputs, labels, learningRate, dropoutRate):
         """Sets TensorFlow Session's 'feed_dict' before each batch."""
         self.batchDict = {
             self.batchSize: len(inputs),
             self.inputs: inputs,
             self.labels: labels,
-            self.learningRate: learningRate
+            self.learningRate: learningRate,
+            self.dropoutRate: dropoutRate
         }
 
     def train(self):
@@ -141,7 +142,7 @@ class LSTM():
         return self.session.run(self.lossMinimiser, self.batchDict)
 
     def get(self, operations):
-        """Returns a tuple of the requested operations."""
+        """Returns a tuple of the specified operations."""
         ops = []
         for op in operations:
             if op == 'labels':
@@ -154,6 +155,12 @@ class LSTM():
                 ops.append(self.accuracy)
 
         return self.session.run(ops, self.batchDict)
+
+    def save(self, modelName="LSTM.ckpt"):
+        self.saver.save(self.session, Constants.savedModelsDir + modelName)
+
+    def restore(self, modelName="LSTM.ckpt"):
+        self.saver.restore(self.session, Constants.savedModelsDir + modelName)
 
     def kill(self):
         """Ends TensorFlow Session."""

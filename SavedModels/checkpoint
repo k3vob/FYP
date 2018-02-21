@@ -1,0 +1,2 @@
+model_checkpoint_path: "/media/kev/HDD/Documents/UCD/Y4S2/COMP30170 Computer Science Project/Project/SavedModels/LSTM.ckpt"
+all_model_checkpoint_paths: "/media/kev/HDD/Documents/UCD/Y4S2/COMP30170 Computer Science Project/Project/SavedModels/LSTM.ckpt"

@@ -1,6 +1,12 @@
 import datetime as dt
 import os
 
+# Directories
+projectDir = os.path.dirname(os.path.realpath(__file__))
+dataDir = projectDir + '/Data/'
+savedModelsDir = projectDir + '/SavedModels/'
+
+# API Autorisation Keys
 alphaVantageKey = 'XIZOWSOCZRYV23XJ'
 quandlKey = 'AysSyMCk5fZSBkHA-8_i'
 
@@ -17,8 +23,6 @@ forgetBias = 1.0
 dropoutRate = 0.5
 
 # Data
-projectDir = os.path.dirname(os.path.realpath(__file__))
-dataDir = projectDir + '/Data/'
 years = 5
 endDate = dt.date(2017, 12, 31)
 startDate = dt.date(2014, 1, 1)

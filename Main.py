@@ -24,6 +24,8 @@ def decayLearningRate(learningRate, accuracy, threshold, thresholdChange):
 #################################
 
 lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=Constants.numLabels)
+# lstm.restore()
+
 learningRate = Constants.learningRate
 threshold = 0.77
 thresholdChange = 0.02
@@ -40,7 +42,7 @@ for epoch in range(Constants.numEpochs):
         while dayPointer != 0:
             dayPointer = max(dayPointer, 0)
             x, y, tickerPointer, dayPointer = bg.getTrainingBatch(tickerPointer, dayPointer)
-            lstm.setBatch(x, y, learningRate)
+            lstm.setBatch(x, y, learningRate, Constants.dropoutRate)
             lstm.train()
             batchLoss, batchAccuracy = lstm.get(['loss', 'accuracy'])
             sliceLosses.append(batchLoss)
@@ -56,6 +58,8 @@ for epoch in range(Constants.numEpochs):
         print("Learning Rate:\t", learningRate)
         print("")
         count += 1
+
+lstm.save()
 
 #################################
 # TESTING
@@ -84,7 +88,7 @@ for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
     while dayPointer != 0:
         dayPointer = max(dayPointer, 0)
         x, y, dayPointer = bg.getTestingBatch(ticker, dayPointer)
-        lstm.setBatch(x, y, 0)
+        lstm.setBatch(x, y, 0, 0)
         batchLoss, batchAccuracy, batchPredictions = lstm.get(
             ['loss', 'accuracy', 'predictions'])
         if dayPointer + Constants.sequenceLength < dw.numTrainingDates:
