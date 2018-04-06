@@ -1,0 +1,57 @@
+- Feature correlations mean anything?
+- Sentiment calculation
+- Trading simulation algo
+- Weight features?
+- 3 vs 5 vs 10 day predictions
+
+- Normalise tickers collectivley or individually?
+- Cyclical learning rate vs (if loss < learningRate * 10) vs (if loss < learningRate)
+- Presentation simulation
+- Overfits training time period (even for unseen ticker)- poor on future period
+- Optimal dropout
+- Optimal batchSize
+- Predict more than 1 day (use predictions for further predicting)
+
+vision.ucd.ie
+kobrien
+
+
+Wiki:
+- Correct links between pages
+- Batching Algo Diagrams
+- Binning/discretisation attempts
+- Distribution of labels (Outliers/spikes at extremes)
+- Theory
+    - Neural Networks
+    - Gradient Descent
+    - Backpropagation
+    - RNNs
+    - Unrolling a Recurrent Neural Network
+    - LSTMs
+    - Resetting the State
+    - TensorFlow
+        - Graph
+        - Session
+    - Batching
+        - Training, Validation, and Testing Sets
+- Model
+    - Masking
+    - Multi-layer
+    - Passing and resetting state between batches
+    - Optimiser
+    - Activation functions
+    - Loss functions
+    - Accuracy calculation
+    - Dropout
+- Evaluation
+    - Overfitting the mean
+
+Model:
+- Linear Interpolation
+- Normalisation
+- Stationarity (Signals)
+    - SDG optimizer
+- Dropout Rate?
+- L2 & L1 regularisation / Weight decay
+- Feature extraction (through other networks - CNN)
+- Wavelet Transformations

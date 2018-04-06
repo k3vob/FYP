@@ -1,157 +1,102 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sb
+import pickle as pk
+import sys
 
-import BatchGenerator as bg
 import Constants
-import DataWorker as dw
+import DailyData
+import Execute
 from Model import LSTM
 
-# Disbale GPU
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# #####################################################################
+# PROCESS COMMAND LINE ARGUMENTS
+# #####################################################################
+instructions = """
+Incorrect options:
 
+-dtype [or] -d ['daily', 'intraday']
+-generate [or] -g ['y', 'n']
+-restore [or] -r ['y', 'n']
+-train [or] -t ['y', 'n']
+-simulate [or] -s ['y', 'n']
 
-def decayLearningRate(learningRate, accuracy, threshold, thresholdChange):
-    if accuracy > threshold and thresholdChange != 0.0:
-        learningRate /= 10
-        threshold += thresholdChange
-        # thresholdChange -= 0.01
-    return learningRate, threshold, thresholdChange
+(All must be specified)
+"""
 
+if len(sys.argv) != 9:
+    print(instructions)
+    sys.exit()
 
-#################################
-# TRAINING
-#################################
+opts = {}
+for i, arg in enumerate(sys.argv):
+    if arg[0] != '-':
+        continue
+    choice = sys.argv[i + 1][0].lower()
+    if arg in ['-g', '-generate'] and choice in ['y', 'n']:
+        opts['g'] = choice
+        continue
+    if arg in ['-r', '-restore'] and choice in ['y', 'n']:
+        opts['r'] = choice
+        continue
+    if arg in ['-t', '-train'] and choice in ['y', 'n']:
+        opts['t'] = choice
+        continue
+    if arg in ['-s', '-simulate'] and choice in ['y', 'n']:
+        opts['s'] = choice
+        continue
+    print(instructions)
+    sys.exit()
 
-lstm = LSTM(numFeatures=dw.numFeatures, numOutputs=Constants.numLabels)
-# lstm.restore()
+# #####################################################################
+# RETRIEVE DATA
+# #####################################################################
+if opts['g'] == 'y':
+    DailyData.generateDataSet()
+prices = pk.load(open(Constants.dataDir + 'dailyPrices.p', 'rb'))
+data = pk.load(open(Constants.dataDir + 'dailyData.p', 'rb'))
 
-learningRate = Constants.learningRate
-threshold = 0.77
-thresholdChange = 0.02
+offlineData = data[:-Constants.onlineLength]
+onlineData = data[-Constants.onlineLength - Constants.sequenceLength + 1:]
 
-for epoch in range(Constants.numEpochs):
-    print("***** EPOCH:", epoch + 1, "*****\n")
-    tickerPointer = -1
-    count = 1
-    while tickerPointer != 0:
-        tickerPointer = max(tickerPointer, 0)
-        sliceLosses = []
-        sliceAccuracies = []
-        dayPointer = -1
-        while dayPointer != 0:
-            dayPointer = max(dayPointer, 0)
-            x, y, tickerPointer, dayPointer = bg.getTrainingBatch(tickerPointer, dayPointer)
-            lstm.setBatch(x, y, learningRate, Constants.dropoutRate)
-            lstm.train()
-            batchLoss, batchAccuracy = lstm.get(['loss', 'accuracy'])
-            sliceLosses.append(batchLoss)
-            sliceAccuracies.append(batchAccuracy)
-        lstm.resetState()
-        loss = sum(sliceLosses) / len(sliceLosses)
-        accuracy = sum(sliceAccuracies) / len(sliceAccuracies)
-        learningRate, threshold, thresholdChange = decayLearningRate(
-            learningRate, accuracy, threshold, thresholdChange)
-        print(epoch + 1, ":", count, "/", dw.numSlices)
-        print("Loss:\t\t", loss)
-        print("Accuracy:\t", "%.2f" % (accuracy * 100) + "%")
-        print("Learning Rate:\t", learningRate)
-        print("")
-        count += 1
+numLabels = Constants.numLabels
+numFeatures = data.shape[1] - numLabels
 
-lstm.save()
+# #####################################################################
+# GENERATE LSTM MODEL
+# #####################################################################
 
-#################################
-# TESTING
-#################################
+lstm = LSTM(
+    numFeatures=numFeatures,
+    numOutputs=numLabels,
+    sequenceLength=100,
+    unitsPerLayer=[250, 100],
+    regularise=True
+)
 
-print("***** TESTING *****\n")
+bestLoss = 1.0
+bestEpoch = 0
 
-sb.set()
-sb.set_style("dark")
+if opts['r'] == 'y':
+    try:
+        lstm.restore()
+        bestLoss = pk.load(open(Constants.modelDir + 'bestLoss.p', 'rb'))
+        bestEpoch = pk.load(open(Constants.modelDir + 'bestEpoch.p', 'rb'))
+        print("\nMODEL LOADED (Loss: {})".format(bestLoss))
+    except Exception:
+        print("""
+        ERROR:
+        Unable to restore model.
+        Does a stored model exist?
+        Have you changed the LSTM architecture?
+        """)
+        sys.exit()
 
-fig = plt.figure()
-ax1 = fig.add_subplot(211)
-ax2 = fig.add_subplot(212)
+# #####################################################################
+# TRAIN MODEL
+# #####################################################################
+if opts['t'] == 'y':
+    Execute.train(lstm, offlineData, bestEpoch, bestLoss)
 
-for i, ticker in enumerate([bg.seenTestingTicker, bg.unseenTestingTicker]):
-    prices = dw.data.loc[ticker]['adj_close']
-    denormalisedPrices = []
-    for price in prices:
-        denormalisedPrices.append(
-            dw.denormalise(price, dw.minPrice, dw.maxPrice)
-        )
-    dates = prices.index
-
-    seenLosses, unseenLosses, seenAccuracies, unseenAccuracies = [], [], [], []
-    dayPointer = -1
-    while dayPointer != 0:
-        dayPointer = max(dayPointer, 0)
-        x, y, dayPointer = bg.getTestingBatch(ticker, dayPointer)
-        lstm.setBatch(x, y, 0, 0)
-        batchLoss, batchAccuracy, batchPredictions = lstm.get(
-            ['loss', 'accuracy', 'predictions'])
-        if dayPointer + Constants.sequenceLength < dw.numTrainingDates:
-            seenLosses.append(batchLoss)
-            seenAccuracies.append(batchAccuracy)
-        else:
-            unseenLosses.append(batchLoss)
-            unseenAccuracies.append(batchAccuracy)
-
-        prediction = np.argmax(batchPredictions[-1][-1])
-
-        if prediction == 0:
-            if i == 0:
-                ax1.scatter(dates[dayPointer + Constants.sequenceLength],
-                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='r')
-            else:
-                ax2.scatter(dates[dayPointer + Constants.sequenceLength],
-                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='r')
-        if prediction == 1:
-            if i == 0:
-                ax1.scatter(dates[dayPointer + Constants.sequenceLength],
-                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='g',)
-            else:
-                ax2.scatter(dates[dayPointer + Constants.sequenceLength],
-                            denormalisedPrices[dayPointer + Constants.sequenceLength], c='g',)
-
-    seenLoss = sum(seenLosses) / len(seenLosses)
-    seenAccuracy = sum(seenAccuracies) / len(seenAccuracies)
-    unseenLoss = sum(unseenLosses) / len(unseenLosses)
-    unseenAccuracy = sum(unseenAccuracies) / len(unseenAccuracies)
-
-    if i == 0:
-        ax1.plot([dates[dw.numTrainingDates],
-                  dates[dw.numTrainingDates]],
-                 [min(denormalisedPrices),
-                  max(denormalisedPrices)],
-                 c='gray')
-
-        ax1.plot(dates, denormalisedPrices)
-        ax1.set_title(ticker + " (Seen Ticker - Training Dates: {}%, Future Dates: {}%)".format(
-            "%.2f" % (seenAccuracy * 100),
-            "%.2f" % (unseenAccuracy * 100))
-        )
-        print("SEEN TICKER")
-
-    else:
-        ax2.plot([dates[dw.numTrainingDates],
-                  dates[dw.numTrainingDates]],
-                 [min(denormalisedPrices),
-                  max(denormalisedPrices)],
-                 c='gray')
-
-        ax2.plot(dates, denormalisedPrices)
-        ax2.set_title(ticker + " (Unseen Ticker - Training Dates: {}%, Future Dates: {}%)".format(
-            "%.2f" % (seenAccuracy * 100),
-            "%.2f" % (unseenAccuracy * 100))
-        )
-        print("UNSEEN TICKER")
-
-    print("Seen Loss:\t", seenLoss)
-    print("Seen Accuracy:\t", "%.2f" % (seenAccuracy * 100) + "%")
-    print("Unseen Loss:\t", unseenLoss)
-    print("Unseen Accuracy:", "%.2f" % (unseenAccuracy * 100) + "%\n")
-
-plt.tight_layout()
-plt.show()
+# #####################################################################
+# SIMULATE PREDICTIONS
+# #####################################################################
+if opts['s'] == 'y':
+    Execute.simulate(lstm, onlineData, prices, Constants.ticker)

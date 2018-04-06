@@ -1,166 +1,246 @@
-import tensorflow as tf
+import os
 
-import Constants
+import tensorflow as tf
 
 
 class LSTM():
+    """OOP implementation of an LSTM RNN using TensorFlow."""
 
     def __init__(
-            self,
-            numFeatures,
-            numOutputs,
-            sequenceLength=Constants.sequenceLength,
-            numLayers=Constants.numLayers,
-            numUnits=Constants.numHidden,  # LSTM units per cell per time step
+        self,
+        numFeatures,        # Number of input features
+        numOutputs,         # Number of output predictions
+        sequenceLength,     # Number of unrolled time steps
+        unitsPerLayer,      # List of number of LSTM units per stacked LSTM cell
+        stateful=False,     # Stateful or stateless LSTM
+        manyToOne=True,     # Many-To-One or Many-To-Many network
+        regularise=False    # Add L2 regularisation to loss calculation
     ):
+
+        #####################################################
+        # Boolean Flags
+        #####################################################
+
+        self.stateful = stateful        # Pass state from batch to batch, or reset after each batch
+        self.manyToOne = manyToOne      # Use outputs at all time steps, or just last
+        self.regularise = regularise    # Add L2 regularisation to LSTM weights or not
 
         #####################################################
         # Batch Placeholders
         #####################################################
+        # Variables to be set per batch
+
         self.batchSize = tf.placeholder(tf.int32, [])
         self.learningRate = tf.placeholder(tf.float32, [])
         self.dropoutRate = tf.placeholder(tf.float32, [])
-        self.inputs = tf.placeholder(
+
+        # Intuitive shape for inputs and outputs to be fed in as
+        # (batchSize, sequenceLength, numFeatures)
+        self.rawInputs = tf.placeholder(
             tf.float32, [None, sequenceLength, numFeatures]
         )
-        self.labels = tf.placeholder(
+        # (batchSize, sequenceLength, numOutputs)
+        self.rawLabels = tf.placeholder(
             tf.float32, [None, sequenceLength, numOutputs]
         )
-        self.inputsUnrolled = tf.unstack(self.inputs, axis=1)
-        self.labelsUnrolled = tf.unstack(self.labels, axis=1)
+
+        # Reshaped for better management using TensorFlow
+        # [sequenceLength * (batchSize, numFeatures)]
+        self.inputs = tf.unstack(self.rawInputs, axis=1)
+        # [sequenceLength * (batchSize, numOutputs)]
+        self.labels = tf.unstack(self.rawLabels, axis=1)
+
+        # If Many-To-One network, only last output is required
+        # (batchSize, numOutputs)
+        if self.manyToOne:
+            self.labels = self.labels[-1]
 
         #####################################################
-        # Weights & Biases
+        # Dense Output Layer Weights & Biases
         #####################################################
 
-        self.weights = tf.Variable(
-            tf.random_normal([numUnits, numOutputs])
+        # Weights in fully connected final output layer
+        # (numUnitsInFinalHiddenLayer, numOutputs)
+        self.denseOutputLayerWeights = tf.Variable(
+            tf.random_normal([unitsPerLayer[-1], numOutputs])
         )
-        self.biases = tf.Variable(
+
+        # Biases in fully connected final output layer
+        # (numOutputs)
+        self.denseOutputLayerWBiases = tf.Variable(
             tf.random_normal([numOutputs])
         )
 
         #####################################################
-        # Network of Stacked Layers
+        # Network of Stacked LSTM Layers
         #####################################################
 
         self.network = self.__buildStackedLayers(
-            numUnits, numLayers, self.dropoutRate
+            unitsPerLayer, self.dropoutRate
         )
 
         #####################################################
         # TensorFlow Graph Operations
         #####################################################
 
-        self.gradientDescentOptimiser = tf.train.AdamOptimizer(self.learningRate)
+        self.session = tf.Session()                             # TensorFlow Session for dynamic runtime
+        self.SGD = tf.train.AdamOptimizer(self.learningRate)    # Stochastic Gradient Descent algorithm
+        self.__buildTensorFlowGraph()                           # Builds static graph prior to dynamic runtime
+        self.saver = tf.train.Saver()                           # Used to save/restore saved trained models
+        self.session.run(tf.global_variables_initializer())     # Initialises all variables prior to dynamic runtime
 
-        self.state = None
-        self.batchDict = None
-        self.outputs = None
-        self.predictions = None
-        self.loss = None
-        self.accuracy = None
-        self.lossMinimiser = None
-        self.__buildTensorFlowGraph()
-        self.session = tf.Session()
-        self.saver = tf.train.Saver()
-        self.session.run(tf.global_variables_initializer())
+    #########################################################
+    # Private Methods
+    #########################################################
 
-    def __buildStackedLayers(self, numUnits, numLayers, dropout):
-        """Stacks layers of LSTM cells, and adds dropout."""
+    def __buildStackedLayers(self, unitsPerLayer, dropoutRate):
+        """Stacks several LSTM layers, and adds dropout to each."""
         layers = []
-        for _ in range(numLayers):
-            layer = tf.contrib.rnn.BasicLSTMCell(numUnits)
-            layer = tf.contrib.rnn.DropoutWrapper(
-                layer, output_keep_prob=(1.0 - dropout)
+        for i in range(len(unitsPerLayer)):
+            cell = tf.contrib.rnn.BasicLSTMCell(unitsPerLayer[i])
+            cell = tf.contrib.rnn.DropoutWrapper(
+                cell, output_keep_prob=(1.0 - dropoutRate)
             )
-            layers.append(layer)
+            layers.append(cell)
         stackedLayers = tf.contrib.rnn.MultiRNNCell(layers)
         return stackedLayers
 
     def __buildTensorFlowGraph(self):
-        """Initialises all TensorFlow graph operations."""
+        """Defines all the TensorFlow operations to process a batch of data."""
+        # Initialise state to zero_state
         self.resetState()
-        self.outputs, self.state = tf.nn.static_rnn(
+
+        # Produces output at final LSTM cell, prior to dense output layer
+        # [sequenceLength * (batchSize, numCellsInFinalHiddenLayer)]
+        LSTMOutputs, self.state = tf.nn.static_rnn(
             self.network,
-            self.inputsUnrolled,
+            self.inputs,
             initial_state=self.state,
             dtype=tf.float32
         )
-        self.outputs = [
-            tf.add(tf.matmul(output, self.weights), self.biases)
-            for output in self.outputs
-        ]
+
+        # Processes LSTM outputs throguh final dense output layer
+        # (batchSize, numOutputs) OR [sequenceLength * (batchSize, numOutputs)]
+        self.outputs = self.__feedThroughDenseOutputLayer(LSTMOutputs)
+
+        # Activate outputs to obtain final predictions
+        # Stores their rounded values to compare with labels
+        # (batchSize, numOutputs) OR [sequenceLength * (batchSize, numOutputs)]
         self.predictions = self.__activateOutputs()
+        self.roundedPredictions = tf.round(self.predictions)
+
+        # Calculates loss value of batch
         self.loss = self.__calculateLoss()
+        # Adds L2 regularisation to loss
+        if self.regularise:
+            self.loss += self.__regularisation()
+        # Performs backpropagation
+        self.lossMinimiser = self.SGD.minimize(self.loss)
+
+        # Calculates accuracy value
         self.accuracy = self.__calculateAccuracy()
-        self.lossMinimiser = self.gradientDescentOptimiser.minimize(self.loss)
+
+    def __feedThroughDenseOutputLayer(self, LSTMOutputs):
+        """Dense fully-connected layer between final LSTM layer and network outputs."""
+        if self.manyToOne:
+            # (batchSize, numUnitsInFinalHiddenLayer)
+            finalSequenceOutput = LSTMOutputs[-1]
+            # (batchSize, numOutputs)
+            finalSequenceOutput = tf.matmul(finalSequenceOutput, self.denseOutputLayerWeights) + self.denseOutputLayerWBiases
+            return finalSequenceOutput
+        else:
+            # [sequenceLength * (batchSize, numOutputs)]
+            sequenceOutputs = [
+                tf.matmul(output, self.denseOutputLayerWeights) + self.denseOutputLayerWBiases
+                for output in LSTMOutputs
+            ]
+            return sequenceOutputs
 
     def __activateOutputs(self):
-        """Applies activation function to all ouputs of the network."""
-        predictions = tf.nn.softmax(self.outputs)
-        predictions = tf.unstack(predictions, axis=0)
-        return predictions
+        """Applies activation function to output neurons."""
+        activations = tf.nn.sigmoid(self.outputs)
+        if self.manyToOne:
+            # (batchSize, numOutputs)
+            return activations
+        else:
+            # [sequenceLength * (batchSize, numOutputs)]
+            return tf.unstack(activations)
 
     def __calculateLoss(self):
-        """Calculates batch loss between predictions and labels."""
-        loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits_v2(
-                labels=self.labelsUnrolled, logits=self.outputs
-            )
-        )
-        return loss
+        """Calculates the loss between the final activated output and the labels."""
+        mse = tf.losses.mean_squared_error(labels=self.labels, predictions=self.predictions)
+        return mse
 
-        # loss = tf.losses.mean_squared_error(
-        #     labels=self.labelsUnrolled, predictions=self.predictions
-        # )
-        # return tf.sqrt(loss)    # RMSE
+    def __regularisation(self):
+        """Adds L2 regularisation on LSTM weights to loss."""
+        L2 = 0.0005 * sum(
+            tf.nn.l2_loss(weight)
+            for weight in tf.trainable_variables()
+            if not ("noreg" in weight.name or "Bias" in weight.name)
+        )
+        return L2
 
     def __calculateAccuracy(self):
-        """Calculates batch accuracy of predictions against labels."""
-        correctPredictions = tf.equal(tf.argmax(self.predictions, axis=-1),
-                                      tf.argmax(self.labelsUnrolled, axis=-1))
+        """Calculates percentage of correct predictions in the batch."""
+        correctPredictions = tf.equal(self.labels, self.roundedPredictions)
         accuracy = tf.reduce_mean(tf.cast(correctPredictions, tf.float32))
         return accuracy
 
+    #########################################################
+    # Public Methods
+    #########################################################
+
     def resetState(self):
-        """Resets memory state of LSTM."""
+        """Resets the hidden state to zero-state."""
         self.state = self.network.zero_state(self.batchSize, tf.float32)
 
-    def setBatch(self, inputs, labels, learningRate, dropoutRate):
-        """Sets TensorFlow Session's 'feed_dict' before each batch."""
+    def setBatch(self, inputs, labels, learningRate=0.0, dropoutRate=0.0):
+        """Data to be used for current batch."""
         self.batchDict = {
             self.batchSize: len(inputs),
-            self.inputs: inputs,
-            self.labels: labels,
+            self.rawInputs: inputs,
+            self.rawLabels: labels,
             self.learningRate: learningRate,
             self.dropoutRate: dropoutRate
         }
 
+        # Reset state each batch if stateless LSTM
+        if not self.stateful:
+            self.resetState()
+
     def train(self):
-        """Executes full forward and backpropagation of network."""
+        """Performs entire forward feed through and backpropagation."""
         return self.session.run(self.lossMinimiser, self.batchDict)
 
     def get(self, operations):
-        """Returns a tuple of the specified operations."""
+        """Returns results of inputted list of operations."""
         ops = []
         for op in operations:
             if op == 'labels':
-                ops.append(self.labelsUnrolled)
+                ops.append(self.labels)
+            if op == 'outputs':
+                ops.append(self.outputs)
             if op == 'predictions':
                 ops.append(self.predictions)
+            if op == 'roundedPredictions':
+                ops.append(self.roundedPredictions)
             if op == 'loss':
                 ops.append(self.loss)
             if op == 'accuracy':
                 ops.append(self.accuracy)
-
         return self.session.run(ops, self.batchDict)
 
-    def save(self, modelName="LSTM.ckpt"):
-        self.saver.save(self.session, Constants.savedModelsDir + modelName)
+    def save(self, modelName="LSTM"):
+        """Saves entire model."""
+        modelName += '.ckpt'
+        dir = os.path.dirname(os.path.realpath(__file__)) + '/SavedModels/'
+        self.saver.save(self.session, dir + modelName)
 
-    def restore(self, modelName="LSTM.ckpt"):
-        self.saver.restore(self.session, Constants.savedModelsDir + modelName)
+    def restore(self, modelName="LSTM"):
+        """Restores previously saved  model."""
+        modelName += '.ckpt'
+        dir = os.path.dirname(os.path.realpath(__file__)) + '/SavedModels/'
+        self.saver.restore(self.session, dir + modelName)
 
     def kill(self):
         """Ends TensorFlow Session."""
