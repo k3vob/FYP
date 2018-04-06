@@ -43,13 +43,22 @@ All arguments must be either specified as y/n.
 ************
 REQUIREMENTS
 ************
+
 numpy==1.14.0
+
 tensorflow_gpu==1.5.0
+
 pandas==0.22.0
+
 TA_Lib==0.4.16
+
 Quandl==3.3.0
+
 alpha_vantage==1.8.0
+
 seaborn==0.8.1
+
 matplotlib==2.1.1
+
 tensorflow==1.7.0
 
