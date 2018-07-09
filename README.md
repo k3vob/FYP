@@ -1,5 +1,7 @@
 #************#
+
 #INSTRUCTIONS#
+
 #************#
 
 This code base include in my project submission is a refined demo illustrating the pinacle
