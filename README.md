@@ -38,25 +38,15 @@ All arguments must be either specified as y/n.
   and will plot out the prices for these 100 days, as well as the ROI that the model would
   achieve by executing trades based on its predictions.
 
-************
-REQUIREMENTS
-************
+## REQUIREMENTS
 
-numpy==1.14.0
-
-tensorflow-gpu==1.5.0
-
-pandas==0.22.0
-
-TA-Lib==0.4.16
-
-quandl==3.3.0
-
-alpha_vantage==1.8.0
-
-seaborn==0.8.1
-
-matplotlib==2.1.1
-
-tensorflow==1.7.0
+    numpy==1.14.0
+    tensorflow-gpu==1.5.0
+    pandas==0.22.0
+    TA-Lib==0.4.16
+    quandl==3.3.0
+    alpha_vantage==1.8.0
+    seaborn==0.8.1
+    matplotlib==2.1.1
+    tensorflow==1.7.0
 
