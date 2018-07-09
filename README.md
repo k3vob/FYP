@@ -1,6 +1,6 @@
-************
-INSTRUCTIONS
-************
+#************#
+#INSTRUCTIONS#
+#************#
 
 This code base include in my project submission is a refined demo illustrating the pinacle
 of all work carried out in my project, described in detail in the report.
